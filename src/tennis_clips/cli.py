@@ -10,7 +10,7 @@ from tennis_clips.detector import (
     load_events,
     save_analysis,
 )
-from tennis_clips.editor import render_compilation
+from tennis_clips.editor import render_compilation, save_clip_manifest
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -33,10 +33,13 @@ def _parser() -> argparse.ArgumentParser:
     make.add_argument("--output", type=Path, default=Path("output/batidas.mp4"))
     make.add_argument("--events", type=Path, default=Path("output/events.json"))
     make.add_argument("--review", type=Path, default=Path("output/review.jpg"))
+    make.add_argument("--manifest", type=Path, default=Path("output/clips.json"))
     make.add_argument("--cache", type=Path, default=Path(".tennis-clips-cache"))
     make.add_argument("--reuse-events", action="store_true")
-    make.add_argument("--pre-roll", type=float, default=0.65)
-    make.add_argument("--post-roll", type=float, default=0.80)
+    make.add_argument("--mode", choices=("hits", "rallies"), default="hits")
+    make.add_argument("--pre-roll", type=float)
+    make.add_argument("--post-roll", type=float)
+    make.add_argument("--merge-gap", type=float)
     make.add_argument("--height", type=int, default=1280)
     make.add_argument("--amplitude-percentile", type=float, default=98.5)
     make.add_argument("--min-motion", type=float, default=0.08)
@@ -76,12 +79,23 @@ def main() -> None:
         events = load_events(args.events)
     else:
         events = _analyze(args)
+    if args.mode == "rallies":
+        pre_roll = 1.20 if args.pre_roll is None else args.pre_roll
+        post_roll = 2.60 if args.post_roll is None else args.post_roll
+        merge_gap = 0.35 if args.merge_gap is None else args.merge_gap
+    else:
+        pre_roll = 0.65 if args.pre_roll is None else args.pre_roll
+        post_roll = 0.80 if args.post_roll is None else args.post_roll
+        merge_gap = 0.10 if args.merge_gap is None else args.merge_gap
+
     ranges = render_compilation(
         args.video.expanduser().resolve(), events, args.output.resolve(), args.cache.resolve(),
-        pre_roll=args.pre_roll, post_roll=args.post_roll, height=args.height,
+        pre_roll=pre_roll, post_roll=post_roll, merge_gap=merge_gap, height=args.height,
     )
+    save_clip_manifest(args.manifest.resolve(), ranges, events, args.mode)
     duration = sum(end - start for start, end in ranges)
     print(f"Video final: {args.output.resolve()}")
+    print(f"Manifesto: {args.manifest.resolve()}")
     print(f"Duracao aproximada: {duration:.1f}s")
 
 

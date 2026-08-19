@@ -1,6 +1,6 @@
 [project]
 name = "tennis-clips"
-version = "0.1.0"
+version = "0.2.0"
 description = "Detecta batidas de tênis e cria automaticamente um vídeo com os melhores cortes."
 readme = "README.md"
 authors = [

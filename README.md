@@ -4,8 +4,8 @@ Transforme uma gravação longa de treino em uma compilação vertical das suas
 batidas. O projeto encontra impactos de raquete pelo áudio, confirma o movimento
 do jogador no vídeo e usa FFmpeg para montar os cortes automaticamente.
 
-> **Estado:** protótipo v0.1.0, calibrado a partir de um treino de 10 minutos
-> gravado com iPhone, câmera fixa atrás da linha de base.
+> **Estado:** protótipo v0.2.0 em desenvolvimento. A primeira versão reproduzível
+> está preservada na tag `v0.1.0`.
 
 ## O que já funciona
 
@@ -73,6 +73,18 @@ Analise e crie a compilação:
 uv run tennis-clips make ~/Downloads/IMG_2842.MOV
 ```
 
+Crie uma versão contextual que mantém a preparação e o desfecho das jogadas:
+
+```bash
+uv run tennis-clips make ~/Downloads/IMG_2842.MOV \
+  --reuse-events --mode rallies --output output/jogadas.mp4
+```
+
+O modo `hits` mantém a montagem curta da v0. O modo `rallies` usa cada batida
+como âncora, expande a janela e une eventos próximos para preservar a troca de
+bola. Cada renderização também cria `output/clips.json`, preparado para uma
+futura revisão humana com os estados `unreviewed`, `accepted` e `rejected`.
+
 O resultado padrão é `output/batidas.mp4`. Depois da primeira análise, é
 possível editar novamente sem recalcular os eventos:
 
@@ -95,16 +107,16 @@ uv run tennis-clips make ~/Downloads/IMG_2842.MOV \
 Valores menores de `--amplitude-percentile` e `--min-motion` aumentam a
 sensibilidade; valores maiores priorizam precisão.
 
-## Limitações da v0
+## Limitações atuais
 
 - a região do jogador ainda usa a cor da camisa como pista;
-- cada impacto gera um corte curto, sem acompanhar o desfecho da jogada;
+- o modo contextual ainda usa margens temporais, sem classificar explicitamente
+  a resposta do adversário ou o fim da jogada;
 - quiques e movimentos rápidos podem produzir falsos positivos;
 - ainda não há rastreamento explícito da pessoa ou da bola.
 
 ## Próximas iterações
 
-- modo contextual que agrupa impactos em jogadas completas;
 - identificação genérica do jogador com câmera fixa;
 - regras distintas para raquetada próxima, distante e quique;
 - revisão humana no estilo aceitar/rejeitar;

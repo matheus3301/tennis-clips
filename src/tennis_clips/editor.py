@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -30,6 +31,7 @@ def render_compilation(
     work_dir: Path,
     pre_roll: float = 0.65,
     post_roll: float = 0.80,
+    merge_gap: float = 0.10,
     height: int = 1280,
 ) -> list[tuple[float, float]]:
     require_media_tools()
@@ -38,7 +40,7 @@ def render_compilation(
     output.parent.mkdir(parents=True, exist_ok=True)
     segments_dir = work_dir / "segments"
     segments_dir.mkdir(parents=True, exist_ok=True)
-    ranges = clip_ranges(events, pre_roll, post_roll)
+    ranges = clip_ranges(events, pre_roll, post_roll, merge_gap)
     segment_paths: list[Path] = []
 
     print(f"Renderizando {len(ranges)} cortes a partir de {len(events)} batidas...")
@@ -75,3 +77,30 @@ def render_compilation(
     ]
     subprocess.run(command, check=True)
     return ranges
+
+
+def save_clip_manifest(
+    path: Path,
+    ranges: list[tuple[float, float]],
+    events: list[Event],
+    mode: str,
+) -> None:
+    clips = []
+    for index, (start, end) in enumerate(ranges, start=1):
+        event_times = [event.time for event in events if start <= event.time <= end]
+        clips.append({
+            "id": f"{mode}-{index:03d}",
+            "start": round(start, 3),
+            "end": round(end, 3),
+            "duration": round(end - start, 3),
+            "event_times": event_times,
+            "review_status": "unreviewed",
+        })
+    payload = {
+        "mode": mode,
+        "clip_count": len(clips),
+        "duration": round(sum(item["duration"] for item in clips), 3),
+        "clips": clips,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
