@@ -198,6 +198,7 @@ def detect_events(
     print(f"{len(candidates)} candidatos de audio; validando movimento do jogador...")
 
     capture = cv2.VideoCapture(str(video))
+    capture.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1)
     if not capture.isOpened():
         raise RuntimeError(f"Nao foi possivel abrir o video: {video}")
     events: list[Event] = []
@@ -253,6 +254,7 @@ def create_review_sheet(
     if not events:
         return
     capture = cv2.VideoCapture(str(video))
+    capture.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1)
     thumbs: list[np.ndarray] = []
     try:
         for number, event in enumerate(events, start=1):

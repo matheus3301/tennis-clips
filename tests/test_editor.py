@@ -41,6 +41,7 @@ class ClipRangesTest(unittest.TestCase):
         self.assertEqual(payload["clips"][0]["id"], "rallies-001")
         self.assertEqual(payload["clips"][0]["review_status"], "unreviewed")
         self.assertEqual(payload["clips"][0]["event_times"], [2.0])
+        self.assertEqual(payload["clips"][1]["output_start"], 3.0)
 
 
 if __name__ == "__main__":

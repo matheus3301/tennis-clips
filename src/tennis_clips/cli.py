@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from tennis_clips.detector import (
@@ -10,7 +11,13 @@ from tennis_clips.detector import (
     load_events,
     save_analysis,
 )
+from tennis_clips.analytics import (
+    analyze_shots,
+    create_analytics_review_sheet,
+    save_analytics,
+)
 from tennis_clips.editor import render_compilation, save_clip_manifest
+from tennis_clips.overlay import render_analytics_overlay
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -43,6 +50,23 @@ def _parser() -> argparse.ArgumentParser:
     make.add_argument("--height", type=int, default=1280)
     make.add_argument("--amplitude-percentile", type=float, default=98.5)
     make.add_argument("--min-motion", type=float, default=0.08)
+
+    analytics = subparsers.add_parser(
+        "analytics", help="Classifica golpes e adiciona metricas ao video contextual."
+    )
+    analytics.add_argument("video", type=Path, help="Video original usado na deteccao.")
+    analytics.add_argument("--base-video", type=Path, default=Path("output/jogadas-v1.mp4"))
+    analytics.add_argument("--events", type=Path, default=Path("output/events.json"))
+    analytics.add_argument("--clips", type=Path, default=Path("output/jogadas-v1.json"))
+    analytics.add_argument("--output", type=Path, default=Path("output/jogadas-v3-analytics.mp4"))
+    analytics.add_argument("--analytics-output", type=Path,
+                           default=Path("output/analytics-v3.json"))
+    analytics.add_argument("--review", type=Path,
+                           default=Path("output/analytics-v3-review.jpg"))
+    analytics.add_argument("--model", type=Path,
+                           default=Path(".tennis-clips-models/pose_landmarker_full.task"))
+    analytics.add_argument("--handedness", choices=("right", "left"), default="right")
+    analytics.add_argument("--no-overlay", action="store_true")
     return parser
 
 
@@ -71,6 +95,29 @@ def main() -> None:
     args = parser.parse_args()
     if args.command == "analyze":
         _analyze(args)
+        return
+
+    if args.command == "analytics":
+        video = args.video.expanduser().resolve()
+        required = (video, args.events.resolve(), args.clips.resolve())
+        missing = [str(path) for path in required if not path.is_file()]
+        if missing:
+            raise SystemExit(f"Arquivos nao encontrados: {', '.join(missing)}")
+        events = load_events(args.events.resolve())
+        payload = analyze_shots(
+            video, events, args.clips.resolve(), args.model.resolve(), args.handedness,
+        )
+        save_analytics(args.analytics_output.resolve(), payload)
+        create_analytics_review_sheet(video, payload, args.review.resolve())
+        if not args.no_overlay:
+            base_video = args.base_video.resolve()
+            if not base_video.is_file():
+                raise SystemExit(f"Video contextual nao encontrado: {base_video}")
+            render_analytics_overlay(base_video, args.output.resolve(), payload)
+            print(f"Video analitico: {args.output.resolve()}")
+        print(f"Metricas: {args.analytics_output.resolve()}")
+        print(f"Revisao: {args.review.resolve()}")
+        print(json.dumps(payload["session"], ensure_ascii=False, indent=2))
         return
 
     if args.reuse_events:

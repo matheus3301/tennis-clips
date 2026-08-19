@@ -1,6 +1,6 @@
 [project]
 name = "tennis-clips"
-version = "0.2.0"
+version = "0.3.0"
 description = "Detecta batidas de tênis e cria automaticamente um vídeo com os melhores cortes."
 readme = "README.md"
 authors = [
@@ -8,9 +8,10 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "numpy>=2.5.2",
-    "opencv-python-headless>=5.0.0.93",
-    "scipy>=1.18.0",
+    "mediapipe==0.10.21",
+    "numpy>=1.26.4,<2",
+    "opencv-contrib-python==4.11.0.86",
+    "scipy>=1.14,<2",
 ]
 
 [project.scripts]

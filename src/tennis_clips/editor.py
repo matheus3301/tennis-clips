@@ -86,16 +86,20 @@ def save_clip_manifest(
     mode: str,
 ) -> None:
     clips = []
+    output_start = 0.0
     for index, (start, end) in enumerate(ranges, start=1):
         event_times = [event.time for event in events if start <= event.time <= end]
+        duration = round(end - start, 3)
         clips.append({
             "id": f"{mode}-{index:03d}",
             "start": round(start, 3),
             "end": round(end, 3),
-            "duration": round(end - start, 3),
+            "duration": duration,
+            "output_start": round(output_start, 3),
             "event_times": event_times,
             "review_status": "unreviewed",
         })
+        output_start += duration
     payload = {
         "mode": mode,
         "clip_count": len(clips),
