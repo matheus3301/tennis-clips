@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Tennis Clips generated artifacts
+.tennis-clips-cache/
+output/
+outputs/
+
+# Local recordings and macOS metadata
+*.MOV
+*.mov
+.DS_Store
