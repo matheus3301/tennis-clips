@@ -101,17 +101,3 @@ struct FailureSessionView: View {
         }
     }
 }
-
-extension TimeInterval {
-    var shortDuration: String {
-        let total = Int(max(self, 0).rounded())
-        let seconds = String(total % 60).leftPadded(to: 2, with: "0")
-        return "\(total / 60):\(seconds)"
-    }
-}
-
-private extension String {
-    func leftPadded(to length: Int, with character: Character) -> String {
-        String(repeating: character, count: max(0, length - count)) + self
-    }
-}

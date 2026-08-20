@@ -5,10 +5,16 @@ import UniformTypeIdentifiers
 struct ImportedMovie: Transferable {
     let url: URL
     let originalName: String
+    let assetIdentifier: String?
 
-    init(url: URL, originalName: String? = nil) {
+    init(url: URL, originalName: String? = nil, assetIdentifier: String? = nil) {
         self.url = url
         self.originalName = originalName ?? url.lastPathComponent
+        self.assetIdentifier = assetIdentifier
+    }
+
+    func attachingAssetIdentifier(_ identifier: String?) -> ImportedMovie {
+        ImportedMovie(url: url, originalName: originalName, assetIdentifier: identifier)
     }
 
     func removeLocalCopy() {

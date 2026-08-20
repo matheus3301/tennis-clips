@@ -49,13 +49,32 @@ struct SessionCard: View {
                         Text(session.displayTitle)
                             .font(.title3.weight(.bold))
                             .foregroundStyle(AppPalette.ink)
-                        Text(session.playedAt, format: .dateTime.day().month(.wide).year())
+                        Text(
+                            session.playedAt,
+                            format: .dateTime.day().month(.wide).year().hour().minute()
+                        )
                             .font(.subheadline)
                             .foregroundStyle(AppPalette.ink.opacity(0.55))
                         if !session.opponent.isEmpty {
                             Text("vs. \(session.opponent)")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(AppPalette.ink.opacity(0.68))
+                        }
+                        if session.displayLocation != nil || session.recordedDuration > 0 {
+                            HStack(spacing: 10) {
+                                if let location = session.displayLocation {
+                                    Label(location, systemImage: "mappin.and.ellipse")
+                                        .lineLimit(1)
+                                }
+                                if session.recordedDuration > 0 {
+                                    Label(session.recordedDuration.shortDuration, systemImage: "clock")
+                                        .accessibilityLabel(
+                                            "Duração gravada, " + session.recordedDuration.spokenDuration
+                                        )
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(AppPalette.ink.opacity(0.56))
                         }
                     }
                     Spacer()
@@ -80,7 +99,7 @@ struct SessionCard: View {
             .background(AppPalette.courtMist)
         }
         .background(AppPalette.courtMist)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(.rect(cornerRadius: 24))
         .overlay {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(AppPalette.baseline.opacity(0.07), lineWidth: 1)

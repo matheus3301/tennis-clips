@@ -46,13 +46,28 @@ struct EditSessionView: View {
                 }
 
                 Section("Detalhes") {
-                    TextField("Nome", text: $title)
+                    TextField("Título", text: $title)
                         .textInputAutocapitalization(.sentences)
-                    DatePicker("Data", selection: $playedAt, displayedComponents: .date)
+                    DatePicker(
+                        "Data e hora",
+                        selection: $playedAt,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
                     if kind == .match {
                         TextField("Adversário (opcional)", text: $opponent)
                             .textInputAutocapitalization(.words)
                     }
+                }
+
+                Section("Metadados") {
+                    LabeledContent("Duração gravada", value: session.recordedDuration.shortDuration)
+                        .accessibilityValue(session.recordedDuration.spokenDuration)
+                    if let location = session.displayLocation {
+                        LabeledContent("Local", value: location)
+                    }
+                    Text("Os metadados vêm das gravações e ajudam na busca e no título automático.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Gravações") {
@@ -172,11 +187,16 @@ struct EditSessionView: View {
                     guard let movie = try await item.loadTransferable(type: ImportedMovie.self) else {
                         throw ProcessingError.cannotReadMedia
                     }
-                    movies.append(movie)
+                    movies.append(movie.attachingAssetIdentifier(item.itemIdentifier))
                 }
                 guard !movies.isEmpty else { throw ProcessingError.cannotReadMedia }
-                try await model.validateImports(movies)
-                try model.addRecordings(movies, to: session, context: modelContext)
+                let metadata = try await model.validateImports(movies)
+                try model.addRecordings(
+                    movies,
+                    metadata: metadata,
+                    to: session,
+                    context: modelContext
+                )
                 selectedItems = []
                 dismiss()
             } catch {

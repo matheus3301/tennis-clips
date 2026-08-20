@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 import SwiftData
@@ -30,9 +31,15 @@ final class AppModel {
     private let activityController: ProcessingActivityController
     private let continuedProcessing: ContinuedProcessingService
     private let mediaPreflight: MediaPreflightService
+    private let metadataService: MediaMetadataService
+    private let locationResolver: any SessionLocationResolving
+    private let titleGenerator: any SessionTitleGenerating
+    private let visualContextProvider: SessionVisualContextProvider
 
     @ObservationIgnored private var activeTasks: [UUID: Task<Void, Never>] = [:]
     @ObservationIgnored private var activeRequestIDs: [UUID: UUID] = [:]
+    @ObservationIgnored private var enrichmentTasks: [UUID: Task<Void, Never>] = [:]
+    @ObservationIgnored private var enrichmentRequestIDs: [UUID: UUID] = [:]
 
     var notice: AppNotice?
     var savingClipID: UUID?
@@ -44,7 +51,11 @@ final class AppModel {
         photoExporter: PhotoLibraryExporter = PhotoLibraryExporter(),
         activityController: ProcessingActivityController = ProcessingActivityController(),
         continuedProcessing: ContinuedProcessingService = ContinuedProcessingService(),
-        mediaPreflight: MediaPreflightService = MediaPreflightService()
+        mediaPreflight: MediaPreflightService = MediaPreflightService(),
+        metadataService: MediaMetadataService = MediaMetadataService(),
+        locationResolver: any SessionLocationResolving = SessionLocationResolver(),
+        titleGenerator: any SessionTitleGenerating = SessionTitleGenerator(),
+        visualContextProvider: SessionVisualContextProvider = SessionVisualContextProvider()
     ) {
         self.analyzer = analyzer
         self.editor = editor
@@ -53,10 +64,47 @@ final class AppModel {
         self.activityController = activityController
         self.continuedProcessing = continuedProcessing
         self.mediaPreflight = mediaPreflight
+        self.metadataService = metadataService
+        self.locationResolver = locationResolver
+        self.titleGenerator = titleGenerator
+        self.visualContextProvider = visualContextProvider
     }
 
-    func validateImports(_ movies: [ImportedMovie]) async throws {
+    func validateImports(_ movies: [ImportedMovie]) async throws -> [ImportedMovieMetadata] {
         try await mediaPreflight.validate(movies)
+    }
+
+    func createSession(
+        kind: SessionKind,
+        opponent: String,
+        movies: [ImportedMovie],
+        metadata: [ImportedMovieMetadata],
+        context: ModelContext
+    ) throws -> TennisSession {
+        let playedAt = metadata.compactMap(\.capturedAt).min() ?? .now
+        let facts = SessionTitleFacts(
+            kind: kind,
+            playedAt: playedAt,
+            recordedDuration: metadata.reduce(0) { $0 + $1.duration },
+            opponent: opponent,
+            location: nil,
+            recordingCount: movies.count,
+            rallyCount: 0
+        )
+        let session = TennisSession(
+            kind: kind,
+            title: titleGenerator.fallback(for: facts, style: TitleStyle.current),
+            opponent: opponent.trimmingCharacters(in: .whitespacesAndNewlines),
+            playedAt: playedAt,
+            playedAtIsManual: false,
+            titleOrigin: .automatic
+        )
+        return try persistSession(
+            session,
+            movies: movies,
+            metadata: metadata,
+            context: context
+        )
     }
 
     func createSession(
@@ -71,22 +119,38 @@ final class AppModel {
             kind: kind,
             title: title,
             opponent: opponent,
-            playedAt: playedAt
+            playedAt: playedAt,
+            titleOrigin: .manual
         )
+        return try persistSession(session, movies: movies, metadata: [], context: context)
+    }
+
+    private func persistSession(
+        _ session: TennisSession,
+        movies: [ImportedMovie],
+        metadata: [ImportedMovieMetadata],
+        context: ModelContext
+    ) throws -> TennisSession {
         context.insert(session)
         do {
             try storage.prepareSession(session.id)
             try storage.validateCapacity(for: movies)
             for (index, movie) in movies.enumerated() {
                 let relativePath = try storage.persist(movie, sessionID: session.id, order: index)
+                let videoMetadata = metadata.indices.contains(index) ? metadata[index] : nil
                 session.videos.append(SessionVideo(
                     order: index,
                     originalName: movie.originalName,
-                    relativePath: relativePath
+                    relativePath: relativePath,
+                    duration: videoMetadata?.duration ?? 0,
+                    capturedAt: videoMetadata?.capturedAt,
+                    latitude: videoMetadata?.latitude,
+                    longitude: videoMetadata?.longitude
                 ))
             }
             try context.save()
             startAnalysis(session, context: context)
+            startEnrichment(session, context: context)
             return session
         } catch {
             storage.removeSession(session.id)
@@ -97,6 +161,7 @@ final class AppModel {
 
     func addRecordings(
         _ movies: [ImportedMovie],
+        metadata: [ImportedMovieMetadata] = [],
         to session: TennisSession,
         context: ModelContext
     ) throws {
@@ -117,10 +182,15 @@ final class AppModel {
                     order: firstOrder + offset
                 )
                 persistedPaths.append(relativePath)
+                let videoMetadata = metadata.indices.contains(offset) ? metadata[offset] : nil
                 let video = SessionVideo(
                     order: firstOrder + offset,
                     originalName: movie.originalName,
-                    relativePath: relativePath
+                    relativePath: relativePath,
+                    duration: videoMetadata?.duration ?? 0,
+                    capturedAt: videoMetadata?.capturedAt,
+                    latitude: videoMetadata?.latitude,
+                    longitude: videoMetadata?.longitude
                 )
                 newVideos.append(video)
                 session.videos.append(video)
@@ -130,6 +200,7 @@ final class AppModel {
             storage.removeCompilation(sessionID: session.id)
             notice = .success(AppCopy.importedRecordings(movies.count) + ". Reanalisando a sessão.")
             startAnalysis(session, context: context)
+            startEnrichment(session, context: context, force: true)
         } catch {
             context.rollback()
             for path in persistedPaths {
@@ -170,6 +241,7 @@ final class AppModel {
             storage.removeCompilation(sessionID: session.id)
             notice = .success("Gravação removida. Reanalisando a sessão.")
             startAnalysis(session, context: context)
+            startEnrichment(session, context: context, force: true)
         } catch {
             context.rollback()
             if let stagedURL {
@@ -215,6 +287,10 @@ final class AppModel {
 
     func resumeIfNeeded(_ sessions: [TennisSession], context: ModelContext) {
         for session in sessions where activeTasks[session.id] == nil {
+            if session.metadataVersion < 1
+                || (session.latitude != nil && session.displayLocation == nil) {
+                startEnrichment(session, context: context)
+            }
             switch session.status {
             case .analyzing:
                 startAnalysis(session, context: context)
@@ -396,6 +472,9 @@ final class AppModel {
 
     func delete(_ session: TennisSession, context: ModelContext) {
         cancelTask(for: session.id)
+        enrichmentTasks[session.id]?.cancel()
+        enrichmentTasks[session.id] = nil
+        enrichmentRequestIDs[session.id] = nil
         do {
             let stagedURL = try storage.stageRemoval(session.id)
             context.delete(session)
@@ -431,8 +510,10 @@ final class AppModel {
     ) -> Bool {
         session.kind = kind
         session.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        session.titleOrigin = .manual
         session.opponent = opponent.trimmingCharacters(in: .whitespacesAndNewlines)
         session.playedAt = playedAt
+        session.playedAtIsManual = true
         session.updatedAt = .now
         return save(context, failureMessage: "Não foi possível atualizar a sessão.")
     }
@@ -555,6 +636,12 @@ final class AppModel {
                 totalVideoCount: totalVideos
             )
             try context.save()
+            if TitleStyle.current == .creative, session.titleOrigin == .automatic {
+                if let enrichmentTask = enrichmentTasks[session.id] {
+                    await enrichmentTask.value
+                }
+                await refreshAutomaticTitle(for: session, context: context)
+            }
             await activityController.end(
                 sessionID: session.id,
                 finalStage: "Jogadas prontas para revisar",
@@ -676,6 +763,172 @@ final class AppModel {
         activeTasks[sessionID]?.cancel()
         activeTasks[sessionID] = nil
         activeRequestIDs[sessionID] = nil
+    }
+
+    private func startEnrichment(
+        _ session: TennisSession,
+        context: ModelContext,
+        force: Bool = false
+    ) {
+        if force {
+            enrichmentTasks[session.id]?.cancel()
+            enrichmentTasks[session.id] = nil
+            enrichmentRequestIDs[session.id] = nil
+            session.metadataVersion = 0
+        } else {
+            guard enrichmentTasks[session.id] == nil else { return }
+        }
+        let requestID = UUID()
+        enrichmentRequestIDs[session.id] = requestID
+        enrichmentTasks[session.id] = Task { [weak self] in
+            guard let self else { return }
+            await self.enrich(session, requestID: requestID, context: context)
+            self.finishEnrichment(for: session.id, requestID: requestID)
+        }
+    }
+
+    private func enrich(
+        _ session: TennisSession,
+        requestID: UUID,
+        context: ModelContext
+    ) async {
+        guard isActiveEnrichment(for: session.id, requestID: requestID) else { return }
+        if session.titleOrigin == .legacy {
+            session.titleOrigin = session.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? .automatic
+                : .manual
+        }
+
+        for video in session.sortedVideos
+        where video.capturedAt == nil || video.duration <= 0
+            || video.latitude == nil || video.longitude == nil {
+            guard !Task.isCancelled else { return }
+            let movie = ImportedMovie(
+                url: storage.url(for: session.id, relativePath: video.relativePath),
+                originalName: video.originalName
+            )
+            guard let metadata = try? await metadataService.metadata(for: movie) else { continue }
+            guard isActiveEnrichment(for: session.id, requestID: requestID) else { return }
+            if video.duration <= 0 { video.duration = metadata.duration }
+            if video.capturedAt == nil { video.capturedAt = metadata.capturedAt }
+            if video.latitude == nil { video.latitude = metadata.latitude }
+            if video.longitude == nil { video.longitude = metadata.longitude }
+        }
+
+        if !session.playedAtIsManual,
+           let capturedAt = session.videos.compactMap(\.capturedAt).min() {
+            session.playedAt = capturedAt
+        }
+        if let coordinate = representativeCoordinate(for: session) {
+            let latitudeChanged = session.latitude.map {
+                abs($0 - coordinate.latitude) > 0.000_01
+            } ?? true
+            let longitudeChanged = session.longitude.map {
+                abs($0 - coordinate.longitude) > 0.000_01
+            } ?? true
+            let coordinateChanged = latitudeChanged || longitudeChanged
+            if coordinateChanged {
+                session.locationName = nil
+                session.locality = nil
+            }
+            session.latitude = coordinate.latitude
+            session.longitude = coordinate.longitude
+            if let location = await locationResolver.resolve(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude
+            ) {
+                guard isActiveEnrichment(for: session.id, requestID: requestID) else { return }
+                session.locationName = location.name
+                session.locality = location.locality
+            }
+        } else {
+            session.latitude = nil
+            session.longitude = nil
+            session.locationName = nil
+            session.locality = nil
+        }
+        guard isActiveEnrichment(for: session.id, requestID: requestID) else { return }
+        session.metadataVersion = 1
+        guard save(context, failureMessage: "Não foi possível salvar os metadados da sessão.") else {
+            session.metadataVersion = 0
+            return
+        }
+
+        if session.titleOrigin == .automatic,
+           TitleStyle.current == .standard || session.status != .analyzing {
+            await refreshAutomaticTitle(for: session, context: context)
+        }
+    }
+
+    private func refreshAutomaticTitle(for session: TennisSession, context: ModelContext) async {
+        guard session.titleOrigin == .automatic, !Task.isCancelled else { return }
+        let style = TitleStyle.current
+        let facts = titleFacts(for: session)
+        let fallback = titleGenerator.fallback(for: facts, style: style)
+        let visualFrames: [CGImage]
+        if style == .creative, titleGenerator.supportsVisualContext {
+            visualFrames = await visualContextProvider.frames(for: visualFrameRequests(for: session))
+        } else {
+            visualFrames = []
+        }
+        guard !Task.isCancelled else { return }
+        let generated = await titleGenerator.generate(
+            for: facts,
+            style: style,
+            visualFrames: visualFrames
+        )
+        guard session.titleOrigin == .automatic, !Task.isCancelled else { return }
+        session.title = generated ?? fallback
+        session.updatedAt = .now
+        save(context, failureMessage: "Não foi possível salvar o título automático.")
+    }
+
+    private func titleFacts(for session: TennisSession) -> SessionTitleFacts {
+        SessionTitleFacts(
+            kind: session.kind,
+            playedAt: session.playedAt,
+            recordedDuration: session.recordedDuration,
+            opponent: session.opponent,
+            location: session.displayLocation,
+            recordingCount: session.videos.count,
+            rallyCount: session.clips.count
+        )
+    }
+
+    private func representativeCoordinate(for session: TennisSession) -> (latitude: Double, longitude: Double)? {
+        let coordinates = session.sortedVideos.compactMap { video -> (Double, Double)? in
+            guard let latitude = video.latitude, let longitude = video.longitude else { return nil }
+            return (latitude, longitude)
+        }
+        guard !coordinates.isEmpty else { return nil }
+        let latitude = coordinates.reduce(0) { $0 + $1.0 } / Double(coordinates.count)
+        let longitude = coordinates.reduce(0) { $0 + $1.1 } / Double(coordinates.count)
+        return (latitude, longitude)
+    }
+
+    private func visualFrameRequests(for session: TennisSession) -> [SessionVisualFrameRequest] {
+        session.clips
+            .sorted { $0.confidence > $1.confidence }
+            .prefix(3)
+            .compactMap { clip in
+                guard let video = session.videos.first(where: { $0.id == clip.sourceVideoID }) else {
+                    return nil
+                }
+                return SessionVisualFrameRequest(
+                    videoURL: storage.url(for: session.id, relativePath: video.relativePath),
+                    time: clip.start + clip.duration / 2
+                )
+            }
+    }
+
+    private func isActiveEnrichment(for sessionID: UUID, requestID: UUID) -> Bool {
+        !Task.isCancelled && enrichmentRequestIDs[sessionID] == requestID
+    }
+
+    private func finishEnrichment(for sessionID: UUID, requestID: UUID) {
+        guard enrichmentRequestIDs[sessionID] == requestID else { return }
+        enrichmentTasks[sessionID] = nil
+        enrichmentRequestIDs[sessionID] = nil
     }
 
     private func finishTask(for sessionID: UUID, requestID: UUID) {

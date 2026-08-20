@@ -20,8 +20,11 @@ nonisolated enum MediaPreflightError: LocalizedError {
 
 nonisolated struct MediaPreflightService: Sendable {
     private let maximumDuration: TimeInterval = 30 * 60
+    private let metadataService = MediaMetadataService()
 
-    func validate(_ movies: [ImportedMovie]) async throws {
+    func validate(_ movies: [ImportedMovie]) async throws -> [ImportedMovieMetadata] {
+        var results: [ImportedMovieMetadata] = []
+        results.reserveCapacity(movies.count)
         for movie in movies {
             let asset = AVURLAsset(url: movie.url)
             guard try await !asset.loadTracks(withMediaType: .video).isEmpty else {
@@ -30,13 +33,16 @@ nonisolated struct MediaPreflightService: Sendable {
             guard try await !asset.loadTracks(withMediaType: .audio).isEmpty else {
                 throw MediaPreflightError.missingAudio(movie.originalName)
             }
-            let duration = try await asset.load(.duration).seconds
+            let metadata = try await metadataService.metadata(for: movie, asset: asset)
+            let duration = metadata.duration
             guard duration.isFinite, duration > 0 else {
                 throw ProcessingError.cannotReadMedia
             }
             guard duration <= maximumDuration else {
                 throw MediaPreflightError.videoTooLong(movie.originalName, minutes: 30)
             }
+            results.append(metadata)
         }
+        return results
     }
 }

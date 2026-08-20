@@ -15,6 +15,9 @@ struct SessionDetailView: View {
         }
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            SessionMetadataSummary(session: session)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Editar", systemImage: "pencil") {
