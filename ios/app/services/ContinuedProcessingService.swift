@@ -4,11 +4,25 @@ import Foundation
 struct ContinuedProcessingService: Sendable {
     static let launchQueue = DispatchQueue.main
 
-    private let identifierPrefix = "dev.mmonteiro.tennisclips.processing"
+    nonisolated private static let identifierPrefix = "dev.mmonteiro.tennisclips.processing"
+
+    nonisolated static func identifier(
+        sessionID: UUID,
+        operationName: String,
+        attemptID: UUID
+    ) -> String {
+        [
+            identifierPrefix,
+            operationName,
+            sessionID.uuidString.lowercased(),
+            attemptID.uuidString.lowercased(),
+        ].joined(separator: ".")
+    }
 
     func perform(
         sessionID: UUID,
         operationName: String,
+        attemptID: UUID,
         title: String,
         subtitle: String,
         operation: @MainActor @escaping (Progress?) async -> Void
@@ -18,8 +32,11 @@ struct ContinuedProcessingService: Sendable {
             return
         }
 
-        let suffix = operationName + "." + sessionID.uuidString.lowercased()
-        let identifier = identifierPrefix + "." + suffix
+        let identifier = Self.identifier(
+            sessionID: sessionID,
+            operationName: operationName,
+            attemptID: attemptID
+        )
         await withCheckedContinuation { continuation in
             let registered = BGTaskScheduler.shared.register(
                 forTaskWithIdentifier: identifier,
@@ -55,7 +72,7 @@ struct ContinuedProcessingService: Sendable {
                 title: title,
                 subtitle: subtitle
             )
-            request.strategy = .fail
+            request.strategy = .queue
             do {
                 try BGTaskScheduler.shared.submit(request)
             } catch {

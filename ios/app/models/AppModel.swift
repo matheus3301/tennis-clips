@@ -183,8 +183,9 @@ final class AppModel {
         }
     }
 
-    func startAnalysis(_ session: TennisSession, context: ModelContext) {
-        cancelTask(for: session.id)
+    @discardableResult
+    func startAnalysis(_ session: TennisSession, context: ModelContext) -> Bool {
+        guard activeTasks[session.id] == nil else { return false }
         let requestID = UUID()
         activeRequestIDs[session.id] = requestID
         session.status = .analyzing
@@ -197,6 +198,7 @@ final class AppModel {
             await self.continuedProcessing.perform(
                 sessionID: session.id,
                 operationName: "analysis",
+                attemptID: requestID,
                 title: "Encontrando jogadas",
                 subtitle: session.displayTitle
             ) { progress in
@@ -208,6 +210,7 @@ final class AppModel {
                 )
             }
         }
+        return true
     }
 
     func resumeIfNeeded(_ sessions: [TennisSession], context: ModelContext) {
@@ -317,12 +320,13 @@ final class AppModel {
         return save(context, failureMessage: "Não foi possível unir as jogadas.")
     }
 
-    func compile(_ session: TennisSession, context: ModelContext) {
+    @discardableResult
+    func compile(_ session: TennisSession, context: ModelContext) -> Bool {
         guard !session.keptClips.isEmpty else {
             notice = .warning("Inclua pelo menos uma jogada antes de montar o vídeo.")
-            return
+            return false
         }
-        cancelTask(for: session.id)
+        guard activeTasks[session.id] == nil else { return false }
         let requestID = UUID()
         activeRequestIDs[session.id] = requestID
         session.status = .exporting
@@ -336,6 +340,7 @@ final class AppModel {
             await self.continuedProcessing.perform(
                 sessionID: session.id,
                 operationName: "export",
+                attemptID: requestID,
                 title: "Montando seu vídeo",
                 subtitle: session.displayTitle
             ) { progress in
@@ -348,6 +353,7 @@ final class AppModel {
                 )
             }
         }
+        return true
     }
 
     func saveClip(

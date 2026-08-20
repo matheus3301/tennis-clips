@@ -122,6 +122,41 @@ final class AppSmokeTests: XCTestCase {
         await fulfillment(of: [callback], timeout: 1)
     }
 
+    func testContinuedProcessingUsesUniqueIdentifierForEveryAttempt() {
+        let sessionID = UUID()
+        let first = ContinuedProcessingService.identifier(
+            sessionID: sessionID,
+            operationName: "analysis",
+            attemptID: UUID()
+        )
+        let second = ContinuedProcessingService.identifier(
+            sessionID: sessionID,
+            operationName: "analysis",
+            attemptID: UUID()
+        )
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertTrue(first.hasPrefix("dev.mmonteiro.tennisclips.processing.analysis."))
+    }
+
+    @MainActor
+    func testAnalysisIgnoresConcurrentRetry() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        container.mainContext.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        XCTAssertTrue(model.startAnalysis(session, context: container.mainContext))
+        XCTAssertFalse(model.startAnalysis(session, context: container.mainContext))
+
+        model.cancelProcessing(session, context: container.mainContext)
+    }
+
     @MainActor
     func testAnalysisKeepsValidClipsWhenOneVideoFails() async throws {
         let container = try ModelContainer(
