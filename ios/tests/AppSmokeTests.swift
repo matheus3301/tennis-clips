@@ -63,13 +63,217 @@ final class AppSmokeTests: XCTestCase {
         )
         XCTAssertEqual(movie.originalName, "Quadra 1.MOV")
     }
+
+    @MainActor
+    func testAnalysisKeepsValidClipsWhenOneVideoFails() async throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        session.videos = [
+            SessionVideo(order: 0, originalName: "sem-jogadas.mov", relativePath: "sources/source-001.mov"),
+            SessionVideo(order: 1, originalName: "com-jogadas.mov", relativePath: "sources/source-002.mov"),
+        ]
+        context.insert(session)
+
+        let storageRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let model = AppModel(
+            analyzer: PartialSuccessAnalyzer(),
+            storage: SessionStorage(rootURL: storageRoot)
+        )
+
+        model.startAnalysis(session, context: context)
+
+        let deadline = ContinuousClock.now + .seconds(3)
+        while session.status == .analyzing, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        XCTAssertEqual(session.status, .reviewing)
+        XCTAssertEqual(session.clips.count, 1)
+        XCTAssertEqual(session.clips.first?.sourceVideoID, session.sortedVideos[1].id)
+        XCTAssertEqual(
+            session.errorMessage,
+            "sem-jogadas.mov não gerou jogadas. A outra foi processada normalmente."
+        )
+    }
+
+    @MainActor
+    func testClipBoundsCanBeCorrectedWithoutChangingDecision() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let clip = RallyClip(
+            sourceVideoID: UUID(),
+            order: 0,
+            start: 2,
+            end: 7,
+            impactCount: 2,
+            confidence: 1
+        )
+        context.insert(clip)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        let didSave = model.updateClipBounds(clip, start: 1.5, end: 8, context: context)
+
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(clip.start, 1.5)
+        XCTAssertEqual(clip.end, 8)
+        XCTAssertEqual(clip.decision, .pending)
+    }
+
+    @MainActor
+    func testCompilationWithoutIncludedClipsProducesWarning() throws {
+        let session = TennisSession(kind: .match, title: "Final", playedAt: .now)
+        let model = AppModel(analyzer: StubAnalyzer())
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+
+        model.compile(session, context: container.mainContext)
+
+        XCTAssertEqual(model.notice?.kind, .warning)
+        XCTAssertEqual(model.notice?.message, "Inclua pelo menos uma jogada antes de montar o vídeo.")
+    }
+
+    func testStagedSessionRemovalCanBeRestored() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let storage = SessionStorage(rootURL: root)
+        let sessionID = UUID()
+        try storage.prepareSession(sessionID)
+        let source = storage.url(for: sessionID, relativePath: "sources/source-001.mov")
+        try Data([0, 1, 2]).write(to: source)
+
+        let staged = try XCTUnwrap(storage.stageRemoval(sessionID))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storage.sessionURL(sessionID).path))
+
+        try storage.restoreStagedRemoval(staged, sessionID: sessionID)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    func testLiveActivityDeepLinkTargetsSession() {
+        let id = UUID()
+        let attributes = TennisProcessingAttributes(sessionID: id.uuidString, title: "Treino")
+
+        XCTAssertEqual(attributes.deepLinkURL?.absoluteString, "tennisclips://session/\(id.uuidString)")
+    }
+
+    func testCurrentSchemaVersionIsExplicit() {
+        XCTAssertEqual(TennisClipsSchemaV1.versionIdentifier, Schema.Version(1, 0, 0))
+        XCTAssertEqual(TennisClipsMigrationPlan.schemas.count, 1)
+    }
+
+    @MainActor
+    func testClipCanBeSplitAndMergedBack() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        let clip = RallyClip(
+            sourceVideoID: UUID(),
+            order: 0,
+            start: 2,
+            end: 10,
+            impactCount: 4,
+            confidence: 0.8
+        )
+        session.clips = [clip]
+        context.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        XCTAssertTrue(model.splitClip(clip, in: session, context: context))
+        XCTAssertEqual(session.sortedClips.count, 2)
+        XCTAssertEqual(session.sortedClips[0].end, 6)
+        XCTAssertEqual(session.sortedClips[1].start, 6)
+
+        XCTAssertTrue(model.mergeWithNextClip(clip, in: session, context: context))
+        XCTAssertEqual(session.clips.count, 1)
+        XCTAssertEqual(clip.start, 2)
+        XCTAssertEqual(clip.end, 10)
+    }
+
+    @MainActor
+    func testRemovingRecordingKeepsAtLeastOneAndRestartsAnalysis() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let storage = SessionStorage(rootURL: root)
+        let session = TennisSession(kind: .match, title: "Jogo", playedAt: .now)
+        let first = SessionVideo(order: 0, originalName: "1.mov", relativePath: "sources/source-001.mov")
+        let second = SessionVideo(order: 1, originalName: "2.mov", relativePath: "sources/source-002.mov")
+        session.videos = [first, second]
+        context.insert(session)
+        try storage.prepareSession(session.id)
+        try Data([0]).write(to: storage.url(for: session.id, relativePath: first.relativePath))
+        try Data([1]).write(to: storage.url(for: session.id, relativePath: second.relativePath))
+        let model = AppModel(analyzer: StubAnalyzer(), storage: storage)
+
+        try model.removeRecording(second, from: session, context: context)
+
+        XCTAssertEqual(session.videos.map(\.id), [first.id])
+        XCTAssertEqual(session.status, .analyzing)
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: storage.url(for: session.id, relativePath: second.relativePath).path
+        ))
+        model.cancelProcessing(session, context: context)
+        XCTAssertThrowsError(try model.removeRecording(first, from: session, context: context))
+        try? FileManager.default.removeItem(at: root)
+    }
 }
 
-private struct StubAnalyzer: TennisAnalyzing {
+nonisolated private struct StubAnalyzer: TennisAnalyzing {
     func analyze(
         videoAt url: URL,
         progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
     ) async throws -> VideoAnalysis {
         VideoAnalysis(duration: 0, impacts: [], clips: [])
+    }
+}
+
+nonisolated private struct PartialSuccessAnalyzer: TennisAnalyzing {
+    func analyze(
+        videoAt url: URL,
+        progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
+    ) async throws -> VideoAnalysis {
+        await progress(ProcessingUpdate(stage: .findingImpacts, fraction: 0.5))
+        if url.lastPathComponent == "source-001.mov" {
+            throw ProcessingError.noImpacts
+        }
+        let impact = ImpactEvent(
+            time: 3,
+            score: 1,
+            amplitude: 1,
+            midEnergyRatio: 0.2,
+            highEnergyRatio: 0.1
+        )
+        return VideoAnalysis(
+            duration: 12,
+            impacts: [impact],
+            clips: [ClipRange(start: 1, end: 6)]
+        )
     }
 }
