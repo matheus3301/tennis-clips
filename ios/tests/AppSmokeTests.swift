@@ -64,6 +64,10 @@ final class AppSmokeTests: XCTestCase {
         XCTAssertEqual(movie.originalName, "Quadra 1.MOV")
     }
 
+    func testPhotoLibraryExporterCanBeCreatedOutsideMainActor() {
+        _ = PhotoLibraryExporter()
+    }
+
     @MainActor
     func testCreatingFirstSessionPreparesStorageBeforeCapacityValidation() throws {
         let sandboxRoot = FileManager.default.temporaryDirectory
