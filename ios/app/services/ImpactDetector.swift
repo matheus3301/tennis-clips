@@ -25,6 +25,7 @@ actor ImpactDetector {
 
         let motionSession = MotionValidationSession(asset: asset)
         var events: [ImpactEvent] = []
+        var lastReportedVisualProgress = 0.64
         events.reserveCapacity(candidates.count)
         for (index, candidate) in candidates.enumerated() {
             try Task.checkCancellation()
@@ -48,7 +49,11 @@ actor ImpactDetector {
                 ))
             }
             let visualFraction = Double(index + 1) / Double(max(candidates.count, 1))
-            await progress(0.64 + visualFraction * 0.36)
+            let overallProgress = 0.64 + visualFraction * 0.36
+            if overallProgress >= 1 || overallProgress - lastReportedVisualProgress >= 0.015 {
+                lastReportedVisualProgress = overallProgress
+                await progress(overallProgress)
+            }
         }
         return events
     }
@@ -76,11 +81,16 @@ actor ImpactDetector {
         guard reader.startReading() else { throw ProcessingError.cannotReadMedia }
 
         var samples: [Float] = []
+        var lastReportedProgress = 0.0
         samples.reserveCapacity(Int(max(duration * sampleRate, sampleRate)))
         while reader.status == .reading, let sampleBuffer = output.copyNextSampleBuffer() {
             try Task.checkCancellation()
             samples.append(contentsOf: Self.floatSamples(from: sampleBuffer))
-            await progress(min(1, Double(samples.count) / max(duration * sampleRate, 1)))
+            let currentProgress = min(1, Double(samples.count) / max(duration * sampleRate, 1))
+            if currentProgress >= 1 || currentProgress - lastReportedProgress >= 0.015 {
+                lastReportedProgress = currentProgress
+                await progress(currentProgress)
+            }
         }
         if reader.status == .failed { throw reader.error ?? ProcessingError.cannotReadMedia }
         return samples

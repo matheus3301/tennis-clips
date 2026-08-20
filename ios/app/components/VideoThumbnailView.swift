@@ -4,8 +4,18 @@ import UIKit
 
 private actor VideoThumbnailLoader {
     static let shared = VideoThumbnailLoader()
+    private let cache = NSCache<NSString, UIImage>()
+
+    init() {
+        cache.countLimit = 80
+        cache.totalCostLimit = 48 * 1_024 * 1_024
+    }
 
     func image(url: URL, time: TimeInterval) -> UIImage? {
+        let key = cacheKey(url: url, time: time)
+        if let cached = cache.object(forKey: key as NSString) {
+            return cached
+        }
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
@@ -14,7 +24,17 @@ private actor VideoThumbnailLoader {
         guard let image = try? generator.copyCGImage(at: requested, actualTime: nil) else {
             return nil
         }
-        return UIImage(cgImage: image)
+        let thumbnail = UIImage(cgImage: image)
+        let cost = image.bytesPerRow * image.height
+        cache.setObject(thumbnail, forKey: key as NSString, cost: cost)
+        return thumbnail
+    }
+
+    private func cacheKey(url: URL, time: TimeInterval) -> String {
+        let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+        let modification = values?.contentModificationDate?.timeIntervalSince1970 ?? 0
+        let size = values?.fileSize ?? 0
+        return "\(url.path)#\(time)#\(size)#\(modification)"
     }
 }
 

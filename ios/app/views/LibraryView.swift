@@ -5,8 +5,12 @@ struct LibraryView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \TennisSession.playedAt, order: .reverse) private var sessions: [TennisSession]
+    @State private var sessionPendingDeletion: TennisSession?
+    @State private var searchText = ""
+    @State private var selectedFilter: LibraryFilter = .all
 
     let onCreate: () -> Void
+    let onSettings: () -> Void
 
     var body: some View {
         ZStack {
@@ -18,7 +22,25 @@ struct LibraryView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if !sessions.isEmpty {
+                    Menu {
+                        Picker("Filtrar histórico", selection: $selectedFilter) {
+                            ForEach(LibraryFilter.allCases) { filter in
+                                Text(filter.title).tag(filter)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: selectedFilter == .all ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill")
+                    }
+                    .accessibilityLabel("Filtrar histórico")
+                }
+
+                Button(action: onSettings) {
+                    Image(systemName: "gearshape")
+                }
+                .accessibilityLabel("Ajustes")
+
                 Button(action: onCreate) {
                     Image(systemName: "plus")
                         .font(.headline.weight(.bold))
@@ -28,6 +50,17 @@ struct LibraryView: View {
         }
         .task {
             model.resumeIfNeeded(sessions, context: modelContext)
+        }
+        .searchable(text: $searchText, prompt: "Buscar sessões")
+        .confirmationDialog(
+            "Remover esta sessão?",
+            isPresented: deletionBinding,
+            titleVisibility: .visible
+        ) {
+            Button("Remover sessão", role: .destructive, action: deletePendingSession)
+            Button("Cancelar", role: .cancel) { sessionPendingDeletion = nil }
+        } message: {
+            Text("As gravações, jogadas e compilações desta sessão serão apagadas do app.")
         }
     }
 
@@ -97,100 +130,89 @@ struct LibraryView: View {
                     Text("Histórico")
                         .displayType(size: 42)
                         .foregroundStyle(AppPalette.ink)
-                    Text("Seus jogos e treinos, em ordem de quadra.")
+                    Text("Seus jogos e treinos, do mais recente ao mais antigo.")
                         .foregroundStyle(AppPalette.ink.opacity(0.58))
                 }
                 .padding(.bottom, 10)
 
-                ForEach(sessions) { session in
-                    NavigationLink(value: session.id) {
-                        SessionCard(session: session)
+                if filteredSessions.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 50)
+                } else {
+                    ForEach(filteredSessions) { session in
+                        VStack(alignment: .leading, spacing: 8) {
+                            ZStack(alignment: .topTrailing) {
+                                NavigationLink(value: AppRoute.session(session.id)) {
+                                    SessionCard(session: session)
+                                }
+                                .buttonStyle(.plain)
+
+                                Menu {
+                                    Button("Remover sessão", systemImage: "trash", role: .destructive) {
+                                        sessionPendingDeletion = session
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis")
+                                        .font(.headline.weight(.bold))
+                                        .foregroundStyle(AppPalette.chalk)
+                                        .frame(width: 44, height: 44)
+                                        .background(.ultraThinMaterial, in: Circle())
+                                        .environment(\.colorScheme, .dark)
+                                }
+                                .padding(10)
+                                .accessibilityLabel("Mais opções para \(session.displayTitle)")
+                            }
+
+                            if session.status == .reviewing {
+                                NavigationLink(value: AppRoute.review(session.id)) {
+                                    Label("Continuar revisão", systemImage: "rectangle.stack.fill")
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(AppPalette.baseline)
+                                .padding(.horizontal, 8)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 14)
             .padding(.bottom, 36)
         }
-        .navigationTitle("Histórico")
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
     }
-}
 
-private struct SessionCard: View {
-    @Environment(AppModel.self) private var model
-    let session: TennisSession
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VideoThumbnailView(
-                url: model.coverURL(for: session),
-                time: session.sortedClips.first?.start ?? 0
-            )
-            .frame(height: 178)
-            .clipped()
-            .overlay(alignment: .topLeading) {
-                Text(session.kind.title.uppercased())
-                    .font(.caption2.weight(.black))
-                    .tracking(1.3)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .foregroundStyle(AppPalette.baseline)
-                    .background(AppPalette.ball, in: Capsule())
-                    .padding(14)
+    private var filteredSessions: [TennisSession] {
+        sessions.filter { session in
+            let matchesFilter: Bool
+            switch selectedFilter {
+            case .all: matchesFilter = true
+            case .matches: matchesFilter = session.kind == .match
+            case .practices: matchesFilter = session.kind == .practice
+            case .pending: matchesFilter = session.status == .reviewing || session.status == .ready
+            case .completed: matchesFilter = session.status == .completed
             }
-
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(session.displayTitle)
-                            .font(.title3.weight(.bold))
-                            .foregroundStyle(AppPalette.ink)
-                        Text(session.playedAt, format: .dateTime.day().month(.wide).year())
-                            .font(.subheadline)
-                            .foregroundStyle(AppPalette.ink.opacity(0.55))
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.bold))
-                        .foregroundStyle(AppPalette.ink.opacity(0.28))
-                }
-
-                RallyRail(
-                    decisions: session.sortedClips.map(\.decision),
-                    currentIndex: nil
-                )
-
-                HStack {
-                    Label(session.status.label, systemImage: statusIcon)
-                    Spacer()
-                    if !session.clips.isEmpty {
-                        Text(String(session.clips.count) + " jogadas")
-                    }
-                }
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(AppPalette.ink.opacity(0.56))
-            }
-            .padding(16)
-            .background(AppPalette.courtMist)
-        }
-        .background(AppPalette.courtMist)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(AppPalette.baseline.opacity(0.07), lineWidth: 1)
+            guard matchesFilter else { return false }
+            let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !query.isEmpty else { return true }
+            return session.displayTitle.localizedStandardContains(query)
+                || session.opponent.localizedStandardContains(query)
         }
     }
 
-    private var statusIcon: String {
-        switch session.status {
-        case .analyzing, .exporting: "circle.dotted"
-        case .reviewing: "rectangle.stack"
-        case .ready: "checkmark.circle"
-        case .completed: "play.rectangle.fill"
-        case .failed: "exclamationmark.triangle"
-        }
+    private var deletionBinding: Binding<Bool> {
+        Binding(
+            get: { sessionPendingDeletion != nil },
+            set: { if !$0 { sessionPendingDeletion = nil } }
+        )
+    }
+
+    private func deletePendingSession() {
+        guard let sessionPendingDeletion else { return }
+        model.delete(sessionPendingDeletion, context: modelContext)
+        self.sessionPendingDeletion = nil
     }
 }
 

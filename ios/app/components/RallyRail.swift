@@ -1,10 +1,20 @@
 import SwiftUI
 
 struct RallyRail: View {
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var differentiateWithoutColor
     let decisions: [RallyDecision]
     let currentIndex: Int?
 
+    @ViewBuilder
     var body: some View {
+        if decisions.count > 20 {
+            aggregateRail
+        } else {
+            detailedRail
+        }
+    }
+
+    private var detailedRail: some View {
         GeometryReader { geometry in
             let count = max(decisions.count, 1)
             let step = count == 1 ? 0 : geometry.size.width / CGFloat(count - 1)
@@ -14,8 +24,8 @@ struct RallyRail: View {
                     .fill(AppPalette.baseline.opacity(0.16))
                     .frame(height: 2)
 
-                ForEach(Array(decisions.enumerated()), id: \.offset) { index, decision in
-                    marker(for: decision)
+                ForEach(decisions.indices, id: \.self) { index in
+                    marker(for: decisions[index])
                         .position(
                             x: count == 1 ? geometry.size.width / 2 : CGFloat(index) * step,
                             y: geometry.size.height / 2
@@ -41,6 +51,20 @@ struct RallyRail: View {
         .accessibilityValue(accessibilityValue)
     }
 
+    private var aggregateRail: some View {
+        HStack(spacing: 8) {
+            ProgressView(value: Double(reviewedCount), total: Double(max(decisions.count, 1)))
+                .tint(AppPalette.baseline)
+            Text("\(reviewedCount)/\(decisions.count)")
+                .font(.caption.monospacedDigit().weight(.semibold))
+                .foregroundStyle(AppPalette.ink.opacity(0.7))
+        }
+        .frame(height: 22)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Progresso da revisão")
+        .accessibilityValue(accessibilityValue)
+    }
+
     @ViewBuilder
     private func marker(for decision: RallyDecision) -> some View {
         switch decision {
@@ -50,18 +74,33 @@ struct RallyRail: View {
                 .background(Circle().fill(AppPalette.chalk))
                 .frame(width: 9, height: 9)
         case .kept:
-            Circle()
-                .fill(AppPalette.baseline)
-                .frame(width: 9, height: 9)
+            if differentiateWithoutColor {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(AppPalette.baseline)
+            } else {
+                Circle()
+                    .fill(AppPalette.baseline)
+                    .frame(width: 9, height: 9)
+            }
         case .rejected:
-            Circle()
-                .fill(AppPalette.clayMark.opacity(0.36))
-                .frame(width: 7, height: 7)
+            if differentiateWithoutColor {
+                Image(systemName: "xmark.circle")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(AppPalette.clayMark)
+            } else {
+                Circle()
+                    .fill(AppPalette.clayMark.opacity(0.52))
+                    .frame(width: 7, height: 7)
+            }
         }
     }
 
+    private var reviewedCount: Int {
+        decisions.filter { $0 != .pending }.count
+    }
+
     private var accessibilityValue: String {
-        let reviewed = decisions.filter { $0 != .pending }.count
-        return "\(reviewed) de \(decisions.count) jogadas revisadas"
+        AppCopy.reviewedPlays(reviewedCount, total: decisions.count)
     }
 }

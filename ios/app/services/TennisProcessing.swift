@@ -1,20 +1,20 @@
 import Foundation
 import TennisClipsCore
 
-struct VideoAnalysis: Sendable {
+nonisolated struct VideoAnalysis: Sendable {
     let duration: TimeInterval
     let impacts: [ImpactEvent]
     let clips: [ClipRange]
 }
 
-protocol TennisAnalyzing: Sendable {
+nonisolated protocol TennisAnalyzing: Sendable {
     func analyze(
         videoAt url: URL,
         progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
     ) async throws -> VideoAnalysis
 }
 
-enum ProcessingError: LocalizedError {
+nonisolated enum ProcessingError: LocalizedError {
     case noAudio
     case noVideo
     case noImpacts
@@ -26,7 +26,7 @@ enum ProcessingError: LocalizedError {
         switch self {
         case .noAudio: "O vídeo não tem uma faixa de áudio utilizável."
         case .noVideo: "O arquivo escolhido não tem uma faixa de vídeo."
-        case .noImpacts: "Nenhuma batida passou pelos filtros deste treino."
+        case .noImpacts: "Nenhuma jogada foi encontrada. Confira se o áudio está audível e se a quadra aparece na gravação."
         case .cannotReadMedia: "Não foi possível ler o arquivo de vídeo."
         case .cannotCreateExport: "Não foi possível preparar a exportação."
         case .exportFailed(let error): "A exportação falhou: \(error?.localizedDescription ?? "erro desconhecido")."

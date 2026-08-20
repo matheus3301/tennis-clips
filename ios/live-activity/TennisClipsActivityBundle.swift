@@ -15,6 +15,7 @@ struct TennisProcessingLiveActivity: Widget {
             LockScreenProcessingView(context: context)
                 .activityBackgroundTint(Color(red: 0.08, green: 0.19, blue: 0.24))
                 .activitySystemActionForegroundColor(.white)
+                .widgetURL(context.attributes.deepLinkURL)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
@@ -29,6 +30,11 @@ struct TennisProcessingLiveActivity: Widget {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(context.state.stage)
                             .font(.headline)
+                        if context.state.totalVideos > 1 {
+                            Text("Vídeo \(context.state.currentVideo) de \(context.state.totalVideos)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         ProgressView(value: context.state.progress)
                             .tint(Color(red: 0.84, green: 0.92, blue: 0.31))
                     }
@@ -50,6 +56,7 @@ struct TennisProcessingLiveActivity: Widget {
                     .padding(3)
             }
             .keylineTint(Color(red: 0.84, green: 0.92, blue: 0.31))
+            .widgetURL(context.attributes.deepLinkURL)
         }
     }
 }
@@ -73,6 +80,11 @@ private struct LockScreenProcessingView: View {
                 Text(context.state.stage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if context.state.totalVideos > 1 {
+                    Text("Vídeo \(context.state.currentVideo) de \(context.state.totalVideos)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 ProgressView(value: context.state.progress)
                     .tint(Color(red: 0.84, green: 0.92, blue: 0.31))
             }

@@ -1,9 +1,10 @@
 import SwiftData
 import SwiftUI
-import UIKit
 
 struct RallyReviewView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
@@ -12,6 +13,11 @@ struct RallyReviewView: View {
     @State private var currentIndex: Int
     @State private var dragOffset: CGSize = .zero
     @State private var history: [UUID] = []
+    @State private var trimSelection: ClipTrimSelection?
+    @State private var includeFeedback = 0
+    @State private var rejectFeedback = 0
+    @State private var undoFeedback = 0
+    @State private var isClipPlaying = true
 
     init(session: TennisSession) {
         self.session = session
@@ -32,39 +38,91 @@ struct RallyReviewView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button("Concluir") { dismiss() }
+                Button("Sair") { dismiss() }
             }
+        }
+        .sensoryFeedback(.success, trigger: includeFeedback)
+        .sensoryFeedback(.warning, trigger: rejectFeedback)
+        .sensoryFeedback(.selection, trigger: undoFeedback)
+        .sheet(item: $trimSelection) { selection in
+            ClipTrimView(selection: selection)
         }
     }
 
     private func review(clip: RallyClip, sourceURL: URL) -> some View {
         VStack(spacing: 16) {
-            HStack {
-                Text("JOGADA " + String(currentIndex + 1))
-                    .font(.caption.weight(.black))
-                    .tracking(1.5)
-                    .foregroundStyle(AppPalette.hardCourt)
-                Spacer()
-                Text(String(session.reviewedClipCount) + " de " + String(clips.count))
-                    .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(AppPalette.ink.opacity(0.52))
-            }
+            reviewHeader(clip: clip)
 
             RallyRail(decisions: clips.map(\.decision), currentIndex: currentIndex)
 
             ZStack {
-                RallyPlayerView(url: sourceURL, start: clip.start, end: clip.end)
+                RallyPlayerView(
+                    url: sourceURL,
+                    start: clip.start,
+                    end: clip.end,
+                    isPlaying: $isClipPlaying
+                )
                     .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
 
                 swipeFeedback
+
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button {
+                            isClipPlaying.toggle()
+                        } label: {
+                            Image(systemName: isClipPlaying ? "pause.fill" : "play.fill")
+                                .font(.headline.weight(.bold))
+                                .foregroundStyle(AppPalette.chalk)
+                                .frame(width: 48, height: 48)
+                                .background(.ultraThinMaterial, in: Circle())
+                                .environment(\.colorScheme, .dark)
+                        }
+                        .accessibilityLabel(isClipPlaying ? "Pausar jogada" : "Reproduzir jogada")
+                    }
+                }
+                .padding(16)
             }
             .frame(maxHeight: .infinity)
             .offset(x: dragOffset.width, y: dragOffset.height * 0.12)
             .rotationEffect(.degrees(Double(dragOffset.width / 24)))
             .highPriorityGesture(dragGesture)
-            .animation(.spring(response: 0.32, dampingFraction: 0.78), value: dragOffset)
+            .animation(
+                reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.78),
+                value: dragOffset
+            )
 
             actionRow(clip: clip)
+
+            Button("Ajustar corte", systemImage: "slider.horizontal.3") {
+                presentTrimEditor(for: clip, sourceURL: sourceURL)
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(AppPalette.baseline)
+
+            Menu("Mais ajustes", systemImage: "ellipsis.circle") {
+                Button("Dividir em duas jogadas", systemImage: "rectangle.split.2x1") {
+                    _ = model.splitClip(clip, in: session, context: modelContext)
+                }
+                .disabled(clip.duration < 2)
+
+                Button("Unir com a próxima", systemImage: "rectangle.on.rectangle") {
+                    _ = model.mergeWithNextClip(clip, in: session, context: modelContext)
+                }
+                .disabled(!canMergeWithNext(clip))
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(AppPalette.baseline)
+
+            if let clipURL = model.clipOutputURL(for: clip, in: session) {
+                ShareLink(item: clipURL) {
+                    Label("Compartilhar jogada", systemImage: "square.and.arrow.up")
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(AppPalette.baseline)
+            }
 
             Button("Desfazer última escolha", systemImage: "arrow.uturn.backward") {
                 undo()
@@ -75,6 +133,45 @@ struct RallyReviewView: View {
         }
         .padding(.horizontal, 18)
         .padding(.bottom, 12)
+    }
+
+    @ViewBuilder
+    private func reviewHeader(clip: RallyClip) -> some View {
+        let title = Text("JOGADA " + String(currentIndex + 1))
+            .font(.caption.weight(.black))
+            .tracking(1.5)
+            .foregroundStyle(AppPalette.hardCourt)
+        let impactDescription = clip.impactCount == 1
+            ? "1 batida detectada"
+            : "\(clip.impactCount) batidas detectadas"
+        let impactTitle = dynamicTypeSize.isAccessibilitySize
+            ? (clip.impactCount == 1 ? "1 batida" : "\(clip.impactCount) batidas")
+            : impactDescription
+        let impacts = Text(impactTitle)
+            .font(.caption2)
+            .foregroundStyle(AppPalette.ink.opacity(0.62))
+            .accessibilityLabel(impactDescription)
+        let progress = Text(String(session.reviewedClipCount) + " de " + String(clips.count))
+            .font(.caption.monospacedDigit().weight(.semibold))
+            .foregroundStyle(AppPalette.ink.opacity(0.52))
+
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                title
+                impacts
+                progress
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    title
+                    impacts
+                }
+                Spacer()
+                progress
+            }
+        }
     }
 
     private var completion: some View {
@@ -92,7 +189,11 @@ struct RallyReviewView: View {
                 .displayType(size: 34)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(AppPalette.ink)
-            Text(String(session.keptClips.count) + " entram no seu vídeo.")
+            Text(
+                session.keptClips.count == 1
+                    ? "Uma jogada entra no seu vídeo."
+                    : "\(session.keptClips.count) jogadas entram no seu vídeo."
+            )
                 .foregroundStyle(AppPalette.ink.opacity(0.58))
             Button("Ver resumo") { dismiss() }
                 .buttonStyle(PrimaryActionButtonStyle())
@@ -143,7 +244,6 @@ struct RallyReviewView: View {
             Button {
                 Task {
                     await model.saveClip(clip, from: session, context: modelContext)
-                    if clip.decision == .kept { advance() }
                 }
             } label: {
                 ZStack {
@@ -196,8 +296,15 @@ struct RallyReviewView: View {
         guard let clip = currentClip else { return }
         history.append(clip.id)
         model.decide(decision, for: clip, in: session, context: modelContext)
-        let generator = UINotificationFeedbackGenerator()
-        generator.notificationOccurred(decision == .kept ? .success : .warning)
+        if decision == .kept {
+            includeFeedback += 1
+        } else {
+            rejectFeedback += 1
+        }
+        guard !reduceMotion else {
+            advance()
+            return
+        }
         dragOffset = CGSize(width: decision == .kept ? 520 : -520, height: 0)
         Task {
             try? await Task.sleep(for: .milliseconds(180))
@@ -207,6 +314,7 @@ struct RallyReviewView: View {
 
     private func advance() {
         dragOffset = .zero
+        isClipPlaying = true
         let updated = clips
         if let next = updated.indices.first(where: { $0 > currentIndex && updated[$0].decision == .pending }) {
             currentIndex = next
@@ -224,28 +332,24 @@ struct RallyReviewView: View {
         model.resetDecision(for: clips[index], in: session, context: modelContext)
         currentIndex = index
         dragOffset = .zero
-        UISelectionFeedbackGenerator().selectionChanged()
+        undoFeedback += 1
     }
-}
 
-private struct ReviewActionButton: View {
-    let label: String
-    let symbol: String
-    let color: Color
-    let action: () -> Void
+    private func presentTrimEditor(for clip: RallyClip, sourceURL: URL) {
+        let videoDuration = session.videos
+            .first(where: { $0.id == clip.sourceVideoID })?
+            .duration ?? clip.end
+        trimSelection = ClipTrimSelection(
+            clip: clip,
+            sourceURL: sourceURL,
+            videoDuration: max(videoDuration, clip.end)
+        )
+    }
 
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 7) {
-                Image(systemName: symbol)
-                    .font(.headline.weight(.black))
-                    .frame(width: 52, height: 52)
-                    .background(color.opacity(0.13), in: Circle())
-                    .foregroundStyle(color)
-                Text(label)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(AppPalette.ink.opacity(0.62))
-            }
-        }
+    private func canMergeWithNext(_ clip: RallyClip) -> Bool {
+        guard let index = clips.firstIndex(where: { $0.id == clip.id }),
+              clips.indices.contains(index + 1)
+        else { return false }
+        return clips[index + 1].sourceVideoID == clip.sourceVideoID
     }
 }

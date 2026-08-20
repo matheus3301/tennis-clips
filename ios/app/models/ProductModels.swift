@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-enum SessionKind: String, Codable, CaseIterable, Identifiable {
+nonisolated enum SessionKind: String, Codable, CaseIterable, Identifiable {
     case match
     case practice
 
@@ -15,7 +15,7 @@ enum SessionKind: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-enum SessionStatus: String, Codable {
+nonisolated enum SessionStatus: String, Codable {
     case analyzing
     case reviewing
     case ready
@@ -35,7 +35,7 @@ enum SessionStatus: String, Codable {
     }
 }
 
-enum RallyDecision: String, Codable {
+nonisolated enum RallyDecision: String, Codable {
     case pending
     case kept
     case rejected

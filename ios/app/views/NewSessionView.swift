@@ -2,9 +2,15 @@ import PhotosUI
 import SwiftData
 import SwiftUI
 
+private struct ImportIssue: Identifiable {
+    let id = UUID()
+    let message: String
+}
+
 struct NewSessionView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.modelContext) private var modelContext
 
     let onCreated: (UUID) -> Void
@@ -15,7 +21,7 @@ struct NewSessionView: View {
     @State private var playedAt = Date()
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var isImporting = false
-    @State private var errorMessage: String?
+    @State private var importIssue: ImportIssue?
 
     var body: some View {
         NavigationStack {
@@ -44,17 +50,19 @@ struct NewSessionView: View {
                         .disabled(isImporting)
                 }
             }
-            .alert("Não foi possível criar a sessão", isPresented: errorBinding) {
-                Button("Tentar novamente", role: .cancel) {}
-            } message: {
-                Text(errorMessage ?? "Revise as gravações selecionadas.")
+            .alert(item: $importIssue) { issue in
+                Alert(
+                    title: Text("Não foi possível criar a sessão"),
+                    message: Text(issue.message),
+                    dismissButton: .default(Text("Entendi"))
+                )
             }
         }
     }
 
     private var intro: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Um lugar para este dia na quadra.")
+            Text("Transforme suas gravações em jogadas.")
                 .displayType(size: 32)
                 .foregroundStyle(AppPalette.ink)
             Text("Você pode juntar várias gravações. O app encontra as jogadas e deixa a escolha final com você.")
@@ -110,7 +118,9 @@ struct NewSessionView: View {
     }
 
     private var recordings: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let hasSelection = !selectedItems.isEmpty
+
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Gravações")
@@ -120,7 +130,7 @@ struct NewSessionView: View {
                         .foregroundStyle(AppPalette.ink.opacity(0.56))
                 }
                 Spacer()
-                if !selectedItems.isEmpty {
+                if hasSelection {
                     Text(String(selectedItems.count))
                         .font(.headline.monospacedDigit())
                         .foregroundStyle(AppPalette.baseline)
@@ -135,12 +145,25 @@ struct NewSessionView: View {
                 matching: .videos
             ) {
                 Label(
-                    selectedItems.isEmpty ? "Escolher vídeos" : "Alterar vídeos",
+                    hasSelection ? "Alterar vídeos" : "Escolher vídeos",
                     systemImage: "video.badge.plus"
                 )
             }
             .buttonStyle(QuietActionButtonStyle())
             .disabled(isImporting)
+
+            DisclosureGroup("Como gravar melhor") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Apoie o iPhone e mantenha a quadra inteira no quadro.", systemImage: "iphone.gen3")
+                    Label("Preserve o áudio original para detectar as batidas.", systemImage: "waveform")
+                    Label("Use vídeos de até 30 minutos; divida gravações mais longas.", systemImage: "clock")
+                }
+                .font(.footnote)
+                .foregroundStyle(AppPalette.ink.opacity(0.7))
+                .padding(.top, 8)
+            }
+            .font(.subheadline.weight(.semibold))
+            .tint(AppPalette.baseline)
         }
         .padding(18)
         .background(AppPalette.courtMist.opacity(0.48), in: RoundedRectangle(cornerRadius: 20))
@@ -154,16 +177,10 @@ struct NewSessionView: View {
             Button {
                 importAndCreate()
             } label: {
-                HStack(spacing: 10) {
-                    if isImporting {
-                        ProgressView().tint(AppPalette.chalk)
-                    } else {
-                        Image(systemName: "sparkles.rectangle.stack")
-                    }
-                    Text(isImporting ? "Importando gravações" : "Encontrar jogadas")
-                }
+                createButtonLabel
             }
             .buttonStyle(PrimaryActionButtonStyle())
+            .accessibilityLabel(isImporting ? "Importando gravações" : "Encontrar jogadas")
             .disabled(selectedItems.isEmpty || isImporting)
             .opacity(selectedItems.isEmpty ? 0.48 : 1)
             .padding(.horizontal, 20)
@@ -173,25 +190,34 @@ struct NewSessionView: View {
         .background(.ultraThinMaterial)
     }
 
+    @ViewBuilder
+    private var createButtonLabel: some View {
+        if isImporting {
+            HStack(spacing: 10) {
+                ProgressView().tint(AppPalette.chalk)
+                Text(dynamicTypeSize.isAccessibilitySize ? "Importando" : "Importando gravações")
+            }
+        } else if dynamicTypeSize.isAccessibilitySize {
+            Text("Analisar")
+        } else {
+            Label("Encontrar jogadas", systemImage: "sparkles.rectangle.stack")
+        }
+    }
+
     private var defaultTitle: String {
         kind == .match ? "Jogo de quinta" : "Treino de saque"
     }
 
-    private var errorBinding: Binding<Bool> {
-        Binding(
-            get: { errorMessage != nil },
-            set: { if !$0 { errorMessage = nil } }
-        )
-    }
-
     private func importAndCreate() {
         isImporting = true
-        errorMessage = nil
+        importIssue = nil
         Task {
             var movies: [ImportedMovie] = []
             do {
+                var failedImportCount = 0
                 for item in selectedItems {
                     guard let movie = try await item.loadTransferable(type: ImportedMovie.self) else {
+                        failedImportCount += 1
                         continue
                     }
                     movies.append(movie)
@@ -199,6 +225,7 @@ struct NewSessionView: View {
                 guard !movies.isEmpty else {
                     throw ProcessingError.cannotReadMedia
                 }
+                try await model.validateImports(movies)
                 let session = try model.createSession(
                     kind: kind,
                     title: title.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -207,11 +234,18 @@ struct NewSessionView: View {
                     movies: movies,
                     context: modelContext
                 )
+                if failedImportCount > 0 {
+                    let subject = failedImportCount == 1 ? "Um vídeo" : "\(failedImportCount) vídeos"
+                    model.notice = .warning("\(subject) não pôde ser importado. Os demais serão analisados.")
+                } else {
+                    let subject = AppCopy.importedRecordings(movies.count)
+                    model.notice = .success("\(subject). Procurando jogadas.")
+                }
                 onCreated(session.id)
                 dismiss()
             } catch {
                 movies.forEach { $0.removeLocalCopy() }
-                errorMessage = error.localizedDescription
+                importIssue = ImportIssue(message: error.localizedDescription)
                 isImporting = false
             }
         }

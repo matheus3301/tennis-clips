@@ -55,11 +55,26 @@ private struct MotionValidator: Sendable {
                     | CGBitmapInfo.byteOrder32Big.rawValue
             ) else { return false }
             context.interpolationQuality = .high
-            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            context.setFillColor(CGColor(gray: 0, alpha: 1))
+            context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            context.draw(image, in: aspectFitRect(for: image))
             return true
         }
         guard created else { throw MotionValidationError.cannotReadFrame }
         return pixels
+    }
+
+    private func aspectFitRect(for image: CGImage) -> CGRect {
+        let source = CGSize(width: image.width, height: image.height)
+        let destination = CGSize(width: width, height: height)
+        let scale = min(destination.width / source.width, destination.height / source.height)
+        let fitted = CGSize(width: source.width * scale, height: source.height * scale)
+        return CGRect(
+            x: (destination.width - fitted.width) / 2,
+            y: (destination.height - fitted.height) / 2,
+            width: fitted.width,
+            height: fitted.height
+        )
     }
 
     private func playerROI(in pixels: [UInt8]) -> ROI {

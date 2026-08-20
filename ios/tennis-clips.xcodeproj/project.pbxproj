@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		028C203039447F82AB72467B /* ProcessingSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDD75F26AD9D218A7D5C0823 /* ProcessingSessionView.swift */; };
 		03DCAB1EB885F1913BA2E0F0 /* rally-processing.json in Resources */ = {isa = PBXBuildFile; fileRef = 777E1E323567348E1F16DBE0 /* rally-processing.json */; };
+		087B8BA0D6549E9C0F9F2123 /* LibraryComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8464A61DB45D48CAF9AF79CF /* LibraryComponents.swift */; };
 		0BE8D214B8BFF34FBB58AE7B /* TennisClipsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3158BF85EE8A93852A026C8E /* TennisClipsApp.swift */; };
 		0EBD4EDB990F9202F8680A35 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D28595AEFCE97BF04E820C5 /* WidgetKit.framework */; };
 		1ABCD02241605DCDF24D0CFB /* ProductModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0ADB1756BEEF3F7A3E8B313 /* ProductModels.swift */; };
@@ -16,30 +18,44 @@
 		2BB9495AC6DEEA0B2BAAC186 /* RallyRail.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190F548565BC91FC110E9564 /* RallyRail.swift */; };
 		2CF65971B0263FF0E2F3EAEF /* VideoThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64136BD3764DC08849184282 /* VideoThumbnailView.swift */; };
 		39677D4E61708EADF6A6F24D /* RallyPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EFDDDDF79ED5467ECD1406E /* RallyPlayerView.swift */; };
+		3AF4A40BE05011F078845C0E /* ProcessingMessageRotator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D5A41F0FFAEF28EE0DDCEF5 /* ProcessingMessageRotator.swift */; };
 		3EC55A48E7562D11102ED3C1 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB7928F1035F6B340059A58 /* RootView.swift */; };
 		432E04F391477D5CB0B497A3 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C95C57E88A161D8FE8515B76 /* ActivityKit.framework */; };
+		4A2156673C3E573ABDA02A6E /* AppNotice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DDC7D975C684BDD7FB28C54 /* AppNotice.swift */; };
 		4E6F9E84F98D7A48C9DC6B4A /* TennisProcessingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35CF26CA5CF61CAE2546287 /* TennisProcessingAttributes.swift */; };
 		5EFA6457DCBC0BA0A68ADD58 /* SessionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7574B0E4EBA1BBC452B7F3ED /* SessionStorage.swift */; };
 		6331A5687C5D25791DF1A5FA /* ImpactDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FECC3DB3F986092E7C6DAAB7 /* ImpactDetector.swift */; };
+		68806A201572074915F824A9 /* CompletedSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F2CA444BEB350E7E2D581E /* CompletedSessionView.swift */; };
 		68C01C2A648A92DABF171B0D /* ProcessingActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A8FD05DB533ECD0F2D9CAD8 /* ProcessingActivityController.swift */; };
 		6CC52846E6E3F6DB70EC8762 /* ProcessingAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB6910FDFAC4D44CA3DF098 /* ProcessingAnimation.swift */; };
-		6F457A62B9284014A0D34321 /* ProcessingMessageRotator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2CA5D6FA2B4DDC81996F6B /* ProcessingMessageRotator.swift */; };
 		6D1188FBD69A6D668001172B /* TennisClipsCore in Frameworks */ = {isa = PBXBuildFile; productRef = F4BC5B1976D6C486FD62ED61 /* TennisClipsCore */; };
 		6D992673A845BAC6A306AF28 /* TennisClipsActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 99571E614F8B3A175953A3FF /* TennisClipsActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7F5AB0AD52CF9A63663D4354 /* AppPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3D8F0D61E5BCB56723C0166 /* AppPalette.swift */; };
+		80D74A696E93456C0CFB6B37 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 060D9B1184012E1C418090B6 /* AppPreferences.swift */; };
+		83701DFF751067E8E403A10F /* AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DFF41145858DC9566334506 /* AppRoute.swift */; };
+		8B4FD30C2CFEDDD211CBB154 /* TennisClipsSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2719AF67F907B0C4C8D50BA0 /* TennisClipsSchema.swift */; };
 		8CAAE10C1F51EA2DE965440A /* RallyReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4201A96E1F8A48278F422FDC /* RallyReviewView.swift */; };
+		92D860865E5C32633E9AE0D0 /* AppIntentIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 202F59D5954B9B2A561941C4 /* AppIntentIntegration.swift */; };
 		A37362AEAF3752A9938CA7F2 /* TennisProcessing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C75015FAE83A54576D0B6AB /* TennisProcessing.swift */; };
 		A44EB17F136FDBD8FCF2FE0F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 837F8CF99F11AF3FD187566F /* SwiftUI.framework */; };
 		AD387837146DCB3384E4DBD7 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0E6FB8F624EA4460F9B9415 /* SessionDetailView.swift */; };
 		B1CC57DE80BB8FD57AFD17F6 /* ImportedMovie.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD77F0EDA0BF855B211018DD /* ImportedMovie.swift */; };
+		B300CB8AFC7CDF1C21688D88 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CB6F69BC40161FE32DF7348F /* Assets.xcassets */; };
+		B44889940012C3EB99D81A11 /* EditSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0B9629DCCF3984746BA5B0 /* EditSessionView.swift */; };
+		B6C5E1C7692ACA73FBE447DB /* MediaPreflightService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D46CAD0844B84B7BA292B7C1 /* MediaPreflightService.swift */; };
 		BB9BB1E5E5BC8203B3FEC71C /* NewSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69BB1ACAF1E0D7AB41DFAE90 /* NewSessionView.swift */; };
 		C03E20001CC6F53DDCECE692 /* AppStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A070E812ED0290D9C27FEC38 /* AppStyles.swift */; };
 		C61053509C8D41077B1CE049 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A085446B2B1800587660970 /* AppModel.swift */; };
 		D0CF8BB3BEE60EF514E677A8 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E6907654DE7C3EC97E71BF /* LibraryView.swift */; };
+		D812DF283AF94CE8A6A7828E /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 82362DC866AB6AA8ED0E3AC1 /* Localizable.xcstrings */; };
 		D85C3DEBF8D7E07E4934C8C5 /* PhotoLibraryExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB36A32C9C1F289B403FE0DD /* PhotoLibraryExporter.swift */; };
+		DA405B51E7FECD468604F2BB /* RallyReviewComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD651778EB88E22786A121FF /* RallyReviewComponents.swift */; };
 		DD1D697D614485FF5B15F9C5 /* TennisProcessingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35CF26CA5CF61CAE2546287 /* TennisProcessingAttributes.swift */; };
+		DEB560C42A9367DF3F99CA4A /* AppCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF78C87737502F2B7117ACEC /* AppCopy.swift */; };
 		E1167EE0A912A54620FEC946 /* AppSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7514D280F8344B66449CB214 /* AppSmokeTests.swift */; };
+		E4382545969A824E43F4F3FD /* AppInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6CD60822AFE763F4D8310BF /* AppInformationView.swift */; };
 		E97AA6EFA4D3CBA2F5FC0E04 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 490D902FF15B38C9BB1EBC7E /* Lottie */; };
+		E9833524EC523BDAE4B4B04F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC133A6C5C6795CAE333C3B7 /* SettingsView.swift */; };
 		E9ABD7876255D79AA71BBBDF /* RallyVideoEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E485405A4FC38EA9D65267F0 /* RallyVideoEditor.swift */; };
 		F05F27DB9530D52F77C04E0C /* TennisClipsActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE2EEAE1B1F076E43F95E4B3 /* TennisClipsActivityBundle.swift */; };
 		FA6A1BA0493037519FA7C5D7 /* OnDeviceTennisProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86F95762191688800FA58984 /* OnDeviceTennisProcessor.swift */; };
@@ -77,16 +93,22 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		060D9B1184012E1C418090B6 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		190F548565BC91FC110E9564 /* RallyRail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyRail.swift; sourceTree = "<group>"; };
 		1D28595AEFCE97BF04E820C5 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		202F59D5954B9B2A561941C4 /* AppIntentIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentIntegration.swift; sourceTree = "<group>"; };
+		2719AF67F907B0C4C8D50BA0 /* TennisClipsSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisClipsSchema.swift; sourceTree = "<group>"; };
 		3158BF85EE8A93852A026C8E /* TennisClipsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisClipsApp.swift; sourceTree = "<group>"; };
 		3A16C9CB35E6A3F240DD187B /* core */ = {isa = PBXFileReference; lastKnownFileType = folder; name = core; path = core; sourceTree = SOURCE_ROOT; };
+		3D0B9629DCCF3984746BA5B0 /* EditSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditSessionView.swift; sourceTree = "<group>"; };
+		3DDC7D975C684BDD7FB28C54 /* AppNotice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotice.swift; sourceTree = "<group>"; };
 		4156649287CDF2ACF402C90E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4201A96E1F8A48278F422FDC /* RallyReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyReviewView.swift; sourceTree = "<group>"; };
 		456D04C09B58D261076FCC12 /* TennisClipsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TennisClipsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4A8FD05DB533ECD0F2D9CAD8 /* ProcessingActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingActivityController.swift; sourceTree = "<group>"; };
 		4BE1745D8A1731748654B494 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4DB6910FDFAC4D44CA3DF098 /* ProcessingAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingAnimation.swift; sourceTree = "<group>"; };
+		4DFF41145858DC9566334506 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
 		5A085446B2B1800587660970 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		5C75015FAE83A54576D0B6AB /* TennisProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisProcessing.swift; sourceTree = "<group>"; };
 		64136BD3764DC08849184282 /* VideoThumbnailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoThumbnailView.swift; sourceTree = "<group>"; };
@@ -95,23 +117,33 @@
 		7514D280F8344B66449CB214 /* AppSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSmokeTests.swift; sourceTree = "<group>"; };
 		7574B0E4EBA1BBC452B7F3ED /* SessionStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStorage.swift; sourceTree = "<group>"; };
 		777E1E323567348E1F16DBE0 /* rally-processing.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rally-processing.json"; sourceTree = "<group>"; };
-		7A2CA5D6FA2B4DDC81996F6B /* ProcessingMessageRotator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingMessageRotator.swift; sourceTree = "<group>"; };
+		82362DC866AB6AA8ED0E3AC1 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		837F8CF99F11AF3FD187566F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		8464A61DB45D48CAF9AF79CF /* LibraryComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryComponents.swift; sourceTree = "<group>"; };
 		86F95762191688800FA58984 /* OnDeviceTennisProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceTennisProcessor.swift; sourceTree = "<group>"; };
+		8D5A41F0FFAEF28EE0DDCEF5 /* ProcessingMessageRotator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingMessageRotator.swift; sourceTree = "<group>"; };
 		8EFDDDDF79ED5467ECD1406E /* RallyPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyPlayerView.swift; sourceTree = "<group>"; };
 		99571E614F8B3A175953A3FF /* TennisClipsActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TennisClipsActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A070E812ED0290D9C27FEC38 /* AppStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStyles.swift; sourceTree = "<group>"; };
 		A0ADB1756BEEF3F7A3E8B313 /* ProductModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductModels.swift; sourceTree = "<group>"; };
+		AF78C87737502F2B7117ACEC /* AppCopy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCopy.swift; sourceTree = "<group>"; };
 		B0E6FB8F624EA4460F9B9415 /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		B35CF26CA5CF61CAE2546287 /* TennisProcessingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisProcessingAttributes.swift; sourceTree = "<group>"; };
 		B5E1ECA0E9250F461910CF66 /* ContinuedProcessingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuedProcessingService.swift; sourceTree = "<group>"; };
 		B7E6907654DE7C3EC97E71BF /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
+		C5F2CA444BEB350E7E2D581E /* CompletedSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletedSessionView.swift; sourceTree = "<group>"; };
 		C95C57E88A161D8FE8515B76 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		CB6F69BC40161FE32DF7348F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CC133A6C5C6795CAE333C3B7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		CD651778EB88E22786A121FF /* RallyReviewComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyReviewComponents.swift; sourceTree = "<group>"; };
+		CDD75F26AD9D218A7D5C0823 /* ProcessingSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingSessionView.swift; sourceTree = "<group>"; };
+		D46CAD0844B84B7BA292B7C1 /* MediaPreflightService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPreflightService.swift; sourceTree = "<group>"; };
 		DB36A32C9C1F289B403FE0DD /* PhotoLibraryExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryExporter.swift; sourceTree = "<group>"; };
 		DD77F0EDA0BF855B211018DD /* ImportedMovie.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportedMovie.swift; sourceTree = "<group>"; };
 		DE2EEAE1B1F076E43F95E4B3 /* TennisClipsActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisClipsActivityBundle.swift; sourceTree = "<group>"; };
 		E3D8F0D61E5BCB56723C0166 /* AppPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPalette.swift; sourceTree = "<group>"; };
 		E485405A4FC38EA9D65267F0 /* RallyVideoEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyVideoEditor.swift; sourceTree = "<group>"; };
+		E6CD60822AFE763F4D8310BF /* AppInformationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppInformationView.swift; sourceTree = "<group>"; };
 		F539201798B0A81AA084E26D /* TennisClips.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TennisClips.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FECC3DB3F986092E7C6DAAB7 /* ImpactDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImpactDetector.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -150,9 +182,14 @@
 		0708378214EBA5B331DBBFF1 /* models */ = {
 			isa = PBXGroup;
 			children = (
+				AF78C87737502F2B7117ACEC /* AppCopy.swift */,
 				5A085446B2B1800587660970 /* AppModel.swift */,
+				3DDC7D975C684BDD7FB28C54 /* AppNotice.swift */,
+				060D9B1184012E1C418090B6 /* AppPreferences.swift */,
+				4DFF41145858DC9566334506 /* AppRoute.swift */,
 				DD77F0EDA0BF855B211018DD /* ImportedMovie.swift */,
 				A0ADB1756BEEF3F7A3E8B313 /* ProductModels.swift */,
+				2719AF67F907B0C4C8D50BA0 /* TennisClipsSchema.swift */,
 			);
 			path = models;
 			sourceTree = "<group>";
@@ -227,7 +264,9 @@
 		A157444E4FD6528991CEF85B /* app */ = {
 			isa = PBXGroup;
 			children = (
+				CB6F69BC40161FE32DF7348F /* Assets.xcassets */,
 				4BE1745D8A1731748654B494 /* Info.plist */,
+				82362DC866AB6AA8ED0E3AC1 /* Localizable.xcstrings */,
 				3158BF85EE8A93852A026C8E /* TennisClipsApp.swift */,
 				C6EFC1C63AA31001E6C9A1ED /* animations */,
 				D193B84BC0BAFBA7D91B1914 /* components */,
@@ -258,8 +297,10 @@
 		C8C92C47E9C1DA7CD846E705 /* services */ = {
 			isa = PBXGroup;
 			children = (
+				202F59D5954B9B2A561941C4 /* AppIntentIntegration.swift */,
 				B5E1ECA0E9250F461910CF66 /* ContinuedProcessingService.swift */,
 				FECC3DB3F986092E7C6DAAB7 /* ImpactDetector.swift */,
+				D46CAD0844B84B7BA292B7C1 /* MediaPreflightService.swift */,
 				86F95762191688800FA58984 /* OnDeviceTennisProcessor.swift */,
 				DB36A32C9C1F289B403FE0DD /* PhotoLibraryExporter.swift */,
 				4A8FD05DB533ECD0F2D9CAD8 /* ProcessingActivityController.swift */,
@@ -273,11 +314,18 @@
 		D18D2E87FE6A8563D99090A0 /* views */ = {
 			isa = PBXGroup;
 			children = (
+				E6CD60822AFE763F4D8310BF /* AppInformationView.swift */,
+				C5F2CA444BEB350E7E2D581E /* CompletedSessionView.swift */,
+				3D0B9629DCCF3984746BA5B0 /* EditSessionView.swift */,
+				8464A61DB45D48CAF9AF79CF /* LibraryComponents.swift */,
 				B7E6907654DE7C3EC97E71BF /* LibraryView.swift */,
 				69BB1ACAF1E0D7AB41DFAE90 /* NewSessionView.swift */,
+				CDD75F26AD9D218A7D5C0823 /* ProcessingSessionView.swift */,
+				CD651778EB88E22786A121FF /* RallyReviewComponents.swift */,
 				4201A96E1F8A48278F422FDC /* RallyReviewView.swift */,
 				6FB7928F1035F6B340059A58 /* RootView.swift */,
 				B0E6FB8F624EA4460F9B9415 /* SessionDetailView.swift */,
+				CC133A6C5C6795CAE333C3B7 /* SettingsView.swift */,
 			);
 			path = views;
 			sourceTree = "<group>";
@@ -286,7 +334,7 @@
 			isa = PBXGroup;
 			children = (
 				4DB6910FDFAC4D44CA3DF098 /* ProcessingAnimation.swift */,
-				7A2CA5D6FA2B4DDC81996F6B /* ProcessingMessageRotator.swift */,
+				8D5A41F0FFAEF28EE0DDCEF5 /* ProcessingMessageRotator.swift */,
 				8EFDDDDF79ED5467ECD1406E /* RallyPlayerView.swift */,
 				190F548565BC91FC110E9564 /* RallyRail.swift */,
 				64136BD3764DC08849184282 /* VideoThumbnailView.swift */,
@@ -381,11 +429,11 @@
 				};
 			};
 			buildConfigurationList = AB20EEEEF741567756D2310E /* Build configuration list for PBXProject "tennis-clips" */;
-			developmentRegion = en;
+			developmentRegion = "pt-BR";
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
-				en,
+				"pt-BR",
 			);
 			mainGroup = 9CCBF663E444BC6DF0BDBAC7;
 			minimizedProjectReferenceProxies = 1;
@@ -410,6 +458,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B300CB8AFC7CDF1C21688D88 /* Assets.xcassets in Resources */,
+				D812DF283AF94CE8A6A7828E /* Localizable.xcstrings in Resources */,
 				03DCAB1EB885F1913BA2E0F0 /* rally-processing.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -421,28 +471,42 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DEB560C42A9367DF3F99CA4A /* AppCopy.swift in Sources */,
+				E4382545969A824E43F4F3FD /* AppInformationView.swift in Sources */,
+				92D860865E5C32633E9AE0D0 /* AppIntentIntegration.swift in Sources */,
 				C61053509C8D41077B1CE049 /* AppModel.swift in Sources */,
+				4A2156673C3E573ABDA02A6E /* AppNotice.swift in Sources */,
 				7F5AB0AD52CF9A63663D4354 /* AppPalette.swift in Sources */,
+				80D74A696E93456C0CFB6B37 /* AppPreferences.swift in Sources */,
+				83701DFF751067E8E403A10F /* AppRoute.swift in Sources */,
 				C03E20001CC6F53DDCECE692 /* AppStyles.swift in Sources */,
+				68806A201572074915F824A9 /* CompletedSessionView.swift in Sources */,
 				228B0739C3A7AB9ADF0ED079 /* ContinuedProcessingService.swift in Sources */,
+				B44889940012C3EB99D81A11 /* EditSessionView.swift in Sources */,
 				6331A5687C5D25791DF1A5FA /* ImpactDetector.swift in Sources */,
 				B1CC57DE80BB8FD57AFD17F6 /* ImportedMovie.swift in Sources */,
+				087B8BA0D6549E9C0F9F2123 /* LibraryComponents.swift in Sources */,
 				D0CF8BB3BEE60EF514E677A8 /* LibraryView.swift in Sources */,
+				B6C5E1C7692ACA73FBE447DB /* MediaPreflightService.swift in Sources */,
 				BB9BB1E5E5BC8203B3FEC71C /* NewSessionView.swift in Sources */,
 				FA6A1BA0493037519FA7C5D7 /* OnDeviceTennisProcessor.swift in Sources */,
 				D85C3DEBF8D7E07E4934C8C5 /* PhotoLibraryExporter.swift in Sources */,
 				68C01C2A648A92DABF171B0D /* ProcessingActivityController.swift in Sources */,
 				6CC52846E6E3F6DB70EC8762 /* ProcessingAnimation.swift in Sources */,
-				6F457A62B9284014A0D34321 /* ProcessingMessageRotator.swift in Sources */,
+				3AF4A40BE05011F078845C0E /* ProcessingMessageRotator.swift in Sources */,
+				028C203039447F82AB72467B /* ProcessingSessionView.swift in Sources */,
 				1ABCD02241605DCDF24D0CFB /* ProductModels.swift in Sources */,
 				39677D4E61708EADF6A6F24D /* RallyPlayerView.swift in Sources */,
 				2BB9495AC6DEEA0B2BAAC186 /* RallyRail.swift in Sources */,
+				DA405B51E7FECD468604F2BB /* RallyReviewComponents.swift in Sources */,
 				8CAAE10C1F51EA2DE965440A /* RallyReviewView.swift in Sources */,
 				E9ABD7876255D79AA71BBBDF /* RallyVideoEditor.swift in Sources */,
 				3EC55A48E7562D11102ED3C1 /* RootView.swift in Sources */,
 				AD387837146DCB3384E4DBD7 /* SessionDetailView.swift in Sources */,
 				5EFA6457DCBC0BA0A68ADD58 /* SessionStorage.swift in Sources */,
+				E9833524EC523BDAE4B4B04F /* SettingsView.swift in Sources */,
 				0BE8D214B8BFF34FBB58AE7B /* TennisClipsApp.swift in Sources */,
+				8B4FD30C2CFEDDD211CBB154 /* TennisClipsSchema.swift in Sources */,
 				A37362AEAF3752A9938CA7F2 /* TennisProcessing.swift in Sources */,
 				4E6F9E84F98D7A48C9DC6B4A /* TennisProcessingAttributes.swift in Sources */,
 				2CF65971B0263FF0E2F3EAEF /* VideoThumbnailView.swift in Sources */,
@@ -542,7 +606,8 @@
 				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -580,6 +645,7 @@
 				PRODUCT_NAME = TennisClipsActivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -637,7 +703,8 @@
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -657,6 +724,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.mmonteiro.tennisclips;
 				PRODUCT_NAME = TennisClips;
 				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -678,6 +746,7 @@
 				PRODUCT_NAME = TennisClipsActivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -698,6 +767,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = dev.mmonteiro.tennisclips;
 				PRODUCT_NAME = TennisClips;
 				SDKROOT = iphoneos;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;

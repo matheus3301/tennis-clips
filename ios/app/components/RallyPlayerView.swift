@@ -6,13 +6,29 @@ struct RallyPlayerView: View {
     let url: URL
     let start: TimeInterval
     let end: TimeInterval
+    @Binding private var isPlaying: Bool
 
     @State private var player = AVPlayer()
+
+    init(
+        url: URL,
+        start: TimeInterval,
+        end: TimeInterval,
+        isPlaying: Binding<Bool> = .constant(true)
+    ) {
+        self.url = url
+        self.start = start
+        self.end = end
+        _isPlaying = isPlaying
+    }
 
     var body: some View {
         AspectFillPlayerView(player: player)
             .onAppear(perform: configure)
             .onChange(of: clipKey) { _, _ in configure() }
+            .onChange(of: isPlaying) { _, shouldPlay in
+                shouldPlay ? player.play() : player.pause()
+            }
             .onReceive(
                 NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)
             ) { notification in
@@ -34,12 +50,13 @@ struct RallyPlayerView: View {
     }
 
     private func restart() {
-        player.seek(
-            to: CMTime(seconds: start, preferredTimescale: 600),
-            toleranceBefore: .zero,
-            toleranceAfter: .zero
-        ) { finished in
-            if finished { player.play() }
+        Task {
+            let finished = await player.seek(
+                to: CMTime(seconds: start, preferredTimescale: 600),
+                toleranceBefore: .zero,
+                toleranceAfter: .zero
+            )
+            if finished, isPlaying { player.play() }
         }
     }
 }

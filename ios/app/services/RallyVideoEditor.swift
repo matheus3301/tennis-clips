@@ -2,7 +2,33 @@
 import CoreGraphics
 import Foundation
 
-struct CompilationSegment: Sendable {
+nonisolated enum ExportQuality: String, CaseIterable, Identifiable, Sendable {
+    case high
+    case compact
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .high: "Alta qualidade"
+        case .compact: "Arquivo menor"
+        }
+    }
+
+    var presetName: String {
+        switch self {
+        case .high: AVAssetExportPresetHighestQuality
+        case .compact: AVAssetExportPresetMediumQuality
+        }
+    }
+
+    static var current: ExportQuality {
+        let rawValue = UserDefaults.standard.string(forKey: "exportQuality") ?? ExportQuality.high.rawValue
+        return ExportQuality(rawValue: rawValue) ?? .high
+    }
+}
+
+nonisolated struct CompilationSegment: Sendable {
     let sourceURL: URL
     let start: TimeInterval
     let end: TimeInterval
@@ -10,7 +36,7 @@ struct CompilationSegment: Sendable {
     var duration: TimeInterval { end - start }
 }
 
-private struct SegmentDescriptor {
+nonisolated private struct SegmentDescriptor {
     let asset: AVURLAsset
     let videoTrack: AVAssetTrack
     let audioTrack: AVAssetTrack?
@@ -28,7 +54,7 @@ private struct SegmentDescriptor {
 
 // AVAssetExportSession's legacy callback predates Swift concurrency. The box
 // only bridges that callback; the session remains owned by RallyVideoEditor.
-private final class ExportSessionBox: @unchecked Sendable {
+nonisolated private final class ExportSessionBox: @unchecked Sendable {
     let value: AVAssetExportSession
 
     init(_ value: AVAssetExportSession) {
@@ -40,6 +66,7 @@ actor RallyVideoEditor {
     func export(
         segments: [CompilationSegment],
         to outputURL: URL,
+        quality: ExportQuality = .high,
         progress: (@MainActor @Sendable (Double) -> Void)? = nil
     ) async throws {
         guard !segments.isEmpty else { throw ProcessingError.noImpacts }
@@ -88,7 +115,7 @@ actor RallyVideoEditor {
         try? FileManager.default.removeItem(at: outputURL)
         guard let exporter = AVAssetExportSession(
             asset: composition,
-            presetName: AVAssetExportPresetHighestQuality
+            presetName: quality.presetName
         ) else { throw ProcessingError.cannotCreateExport }
         exporter.videoComposition = videoComposition
         let exporterBox = ExportSessionBox(exporter)
@@ -118,7 +145,7 @@ actor RallyVideoEditor {
     }
 
     func export(segment: CompilationSegment, to outputURL: URL) async throws {
-        try await export(segments: [segment], to: outputURL)
+        try await export(segments: [segment], to: outputURL, quality: .high)
     }
 
     private func loadDescriptors(for segments: [CompilationSegment]) async throws -> [SegmentDescriptor] {

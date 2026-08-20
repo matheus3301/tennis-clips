@@ -1,7 +1,11 @@
-import ActivityKit
+// ActivityKit's Activity reference is not annotated as Sendable in the iOS 17
+// compatibility surface. Keep that framework boundary preconcurrency while all
+// access to the stored activities remains serialized on the main actor.
+@preconcurrency import ActivityKit
 import Foundation
 
-actor ProcessingActivityController {
+@MainActor
+final class ProcessingActivityController {
     private var activities: [UUID: Activity<TennisProcessingAttributes>] = [:]
     private var lastProgress: [UUID: Double] = [:]
 

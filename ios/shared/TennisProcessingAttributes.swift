@@ -1,8 +1,8 @@
 import ActivityKit
 import Foundation
 
-struct TennisProcessingAttributes: ActivityAttributes {
-    struct ContentState: Codable, Hashable {
+nonisolated struct TennisProcessingAttributes: ActivityAttributes {
+    nonisolated struct ContentState: Codable, Hashable {
         var progress: Double
         var stage: String
         var currentVideo: Int
@@ -11,4 +11,8 @@ struct TennisProcessingAttributes: ActivityAttributes {
 
     let sessionID: String
     let title: String
+
+    var deepLinkURL: URL? {
+        URL(string: "tennisclips://session/\(sessionID)")
+    }
 }

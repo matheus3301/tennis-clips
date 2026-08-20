@@ -1,7 +1,7 @@
 import Foundation
 import Photos
 
-enum PhotoLibraryExportError: LocalizedError {
+nonisolated enum PhotoLibraryExportError: LocalizedError {
     case accessDenied
 
     var errorDescription: String? {
