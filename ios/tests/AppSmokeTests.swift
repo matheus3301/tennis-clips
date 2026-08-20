@@ -56,6 +56,38 @@ final class AppSmokeTests: XCTestCase {
         XCTAssertEqual(session.keptClips.map(\.id), [first.id])
     }
 
+    @MainActor
+    func testChangingCompletedMontageMarksItReadyForRebuild() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        let clip = RallyClip(
+            sourceVideoID: UUID(),
+            order: 0,
+            start: 1,
+            end: 5,
+            impactCount: 2,
+            confidence: 1,
+            decision: .kept
+        )
+        session.clips = [clip]
+        session.outputPath = "exports/compilation.mp4"
+        session.status = .completed
+        context.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        model.decide(.rejected, for: clip, in: session, context: context)
+
+        XCTAssertEqual(clip.decision, .rejected)
+        XCTAssertEqual(session.status, .ready)
+        XCTAssertEqual(session.outputPath, "exports/compilation.mp4")
+    }
+
     func testImportedMoviePreservesDisplayName() {
         let movie = ImportedMovie(
             url: URL(fileURLWithPath: "/tmp/random.mov"),
@@ -217,15 +249,62 @@ final class AppSmokeTests: XCTestCase {
             impactCount: 2,
             confidence: 1
         )
-        context.insert(clip)
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        session.clips = [clip]
+        context.insert(session)
         let model = AppModel(analyzer: StubAnalyzer())
 
-        let didSave = model.updateClipBounds(clip, start: 1.5, end: 8, context: context)
+        let didSave = model.updateClipBounds(
+            clip,
+            start: 1.5,
+            end: 8,
+            in: session,
+            context: context
+        )
 
         XCTAssertTrue(didSave)
         XCTAssertEqual(clip.start, 1.5)
         XCTAssertEqual(clip.end, 8)
         XCTAssertEqual(clip.decision, .pending)
+        XCTAssertEqual(session.status, .reviewing)
+    }
+
+    @MainActor
+    func testCorrectingCompletedClipMarksMontageReadyForRebuild() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let clip = RallyClip(
+            sourceVideoID: UUID(),
+            order: 0,
+            start: 2,
+            end: 7,
+            impactCount: 2,
+            confidence: 1,
+            decision: .kept
+        )
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        session.clips = [clip]
+        session.outputPath = "exports/compilation.mp4"
+        session.status = .completed
+        context.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        XCTAssertTrue(model.updateClipBounds(
+            clip,
+            start: 1.5,
+            end: 8,
+            in: session,
+            context: context
+        ))
+
+        XCTAssertEqual(clip.decision, .kept)
+        XCTAssertEqual(session.status, .ready)
+        XCTAssertEqual(session.outputPath, "exports/compilation.mp4")
     }
 
     @MainActor
@@ -290,7 +369,8 @@ final class AppSmokeTests: XCTestCase {
             start: 2,
             end: 10,
             impactCount: 4,
-            confidence: 0.8
+            confidence: 0.8,
+            decision: .kept
         )
         session.clips = [clip]
         context.insert(session)
@@ -300,11 +380,107 @@ final class AppSmokeTests: XCTestCase {
         XCTAssertEqual(session.sortedClips.count, 2)
         XCTAssertEqual(session.sortedClips[0].end, 6)
         XCTAssertEqual(session.sortedClips[1].start, 6)
+        XCTAssertEqual(session.sortedClips.map(\.decision), [.kept, .kept])
+        XCTAssertEqual(session.status, .ready)
 
         XCTAssertTrue(model.mergeWithNextClip(clip, in: session, context: context))
         XCTAssertEqual(session.clips.count, 1)
         XCTAssertEqual(clip.start, 2)
         XCTAssertEqual(clip.end, 10)
+        XCTAssertEqual(clip.decision, .kept)
+        XCTAssertEqual(session.status, .ready)
+    }
+
+    @MainActor
+    func testSplittingMiddleClipPreservesOrderDecisionAndImpactCount() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let videoID = UUID()
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        let first = RallyClip(
+            sourceVideoID: videoID,
+            order: 0,
+            start: 0,
+            end: 2,
+            impactCount: 1,
+            confidence: 1,
+            decision: .kept
+        )
+        let middle = RallyClip(
+            sourceVideoID: videoID,
+            order: 1,
+            start: 3,
+            end: 7,
+            impactCount: 1,
+            confidence: 1,
+            decision: .rejected
+        )
+        let last = RallyClip(
+            sourceVideoID: videoID,
+            order: 2,
+            start: 8,
+            end: 12,
+            impactCount: 2,
+            confidence: 1,
+            decision: .kept
+        )
+        session.clips = [first, middle, last]
+        context.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        XCTAssertTrue(model.splitClip(middle, in: session, context: context))
+
+        XCTAssertEqual(session.sortedClips.map(\.order), [0, 1, 2, 3])
+        XCTAssertEqual(session.sortedClips.map(\.decision), [.kept, .rejected, .rejected, .kept])
+        XCTAssertEqual(session.sortedClips[1].impactCount + session.sortedClips[2].impactCount, 1)
+        XCTAssertEqual(session.status, .ready)
+    }
+
+    @MainActor
+    func testMergingClipsWithDifferentDecisionsIsRejectedWithoutMutation() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let videoID = UUID()
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        let included = RallyClip(
+            sourceVideoID: videoID,
+            order: 0,
+            start: 1,
+            end: 4,
+            impactCount: 1,
+            confidence: 1,
+            decision: .kept
+        )
+        let rejected = RallyClip(
+            sourceVideoID: videoID,
+            order: 1,
+            start: 5,
+            end: 8,
+            impactCount: 1,
+            confidence: 1,
+            decision: .rejected
+        )
+        session.clips = [included, rejected]
+        context.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        XCTAssertFalse(model.mergeWithNextClip(included, in: session, context: context))
+
+        XCTAssertEqual(session.sortedClips.map(\.id), [included.id, rejected.id])
+        XCTAssertEqual(included.end, 4)
+        XCTAssertEqual(included.decision, .kept)
+        XCTAssertEqual(rejected.decision, .rejected)
+        XCTAssertEqual(model.notice?.message, "Para unir, coloque as duas jogadas no mesmo grupo primeiro.")
     }
 
     @MainActor

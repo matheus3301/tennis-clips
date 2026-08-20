@@ -132,7 +132,7 @@ private struct ReviewSummaryView: View {
                 RallyRail(decisions: session.sortedClips.map(\.decision), currentIndex: nil)
                     .padding(.vertical, 8)
 
-                NavigationLink(value: AppRoute.review(session.id)) {
+                NavigationLink(value: AppRoute.montage(session.id)) {
                     Label("Rever escolhas", systemImage: "arrow.uturn.backward")
                 }
                 .buttonStyle(QuietActionButtonStyle())

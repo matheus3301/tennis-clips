@@ -99,7 +99,11 @@ struct RootView: View {
                 return
             }
             presentedSheet = nil
-            path = [.review(session.id)]
+            path = [
+                session.pendingClipCount > 0
+                    ? .review(session.id)
+                    : .montage(session.id)
+            ]
         case .session(let sessionID):
             presentedSheet = nil
             path = [.session(sessionID)]
@@ -124,6 +128,10 @@ private struct SessionDestinationView: View {
                 SessionDetailView(session: session)
             case .review:
                 RallyReviewView(session: session)
+            case .montage:
+                MontageEditorView(session: session)
+            case .rally(_, let clipID):
+                RallyDetailEditorView(session: session, initialClipID: clipID)
             }
         } else {
             ContentUnavailableView(

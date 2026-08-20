@@ -11,15 +11,15 @@ private actor VideoThumbnailLoader {
         cache.totalCostLimit = 48 * 1_024 * 1_024
     }
 
-    func image(url: URL, time: TimeInterval) -> UIImage? {
-        let key = cacheKey(url: url, time: time)
+    func image(url: URL, time: TimeInterval, maximumPixelSize: Int) -> UIImage? {
+        let key = cacheKey(url: url, time: time, maximumPixelSize: maximumPixelSize)
         if let cached = cache.object(forKey: key as NSString) {
             return cached
         }
         let asset = AVURLAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
-        generator.maximumSize = CGSize(width: 720, height: 720)
+        generator.maximumSize = CGSize(width: maximumPixelSize, height: maximumPixelSize)
         let requested = CMTime(seconds: max(time, 0), preferredTimescale: 600)
         guard let image = try? generator.copyCGImage(at: requested, actualTime: nil) else {
             return nil
@@ -30,11 +30,11 @@ private actor VideoThumbnailLoader {
         return thumbnail
     }
 
-    private func cacheKey(url: URL, time: TimeInterval) -> String {
+    private func cacheKey(url: URL, time: TimeInterval, maximumPixelSize: Int) -> String {
         let values = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
         let modification = values?.contentModificationDate?.timeIntervalSince1970 ?? 0
         let size = values?.fileSize ?? 0
-        return "\(url.path)#\(time)#\(size)#\(modification)"
+        return "\(url.path)#\(time)#\(maximumPixelSize)#\(size)#\(modification)"
     }
 }
 
@@ -43,6 +43,7 @@ struct VideoThumbnailView: View {
     // A small offset avoids the black encoder lead-in that is common in
     // freshly exported compilations while still representing the opening shot.
     var time: TimeInterval = 0.25
+    var maximumPixelSize = 720
 
     @State private var image: UIImage?
 
@@ -64,13 +65,20 @@ struct VideoThumbnailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
         .task(id: taskID) {
+            image = nil
             guard let url else { return }
-            image = await VideoThumbnailLoader.shared.image(url: url, time: time)
+            let loadedImage = await VideoThumbnailLoader.shared.image(
+                url: url,
+                time: time,
+                maximumPixelSize: maximumPixelSize
+            )
+            guard !Task.isCancelled else { return }
+            image = loadedImage
         }
     }
 
     private var taskID: String {
-        (url?.path ?? "none") + "#" + String(time)
+        (url?.path ?? "none") + "#" + String(time) + "#" + String(maximumPixelSize)
     }
 }
 

@@ -340,6 +340,7 @@ struct RallyReviewView: View {
             .first(where: { $0.id == clip.sourceVideoID })?
             .duration ?? clip.end
         trimSelection = ClipTrimSelection(
+            session: session,
             clip: clip,
             sourceURL: sourceURL,
             videoDuration: max(videoDuration, clip.end)

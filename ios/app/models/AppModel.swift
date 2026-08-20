@@ -251,6 +251,7 @@ final class AppModel {
         _ clip: RallyClip,
         start: TimeInterval,
         end: TimeInterval,
+        in session: TennisSession,
         context: ModelContext
     ) -> Bool {
         guard start >= 0, end - start >= 0.5 else {
@@ -259,6 +260,7 @@ final class AppModel {
         }
         clip.start = start
         clip.end = end
+        session.status = session.pendingClipCount == 0 ? .ready : .reviewing
         return save(context, failureMessage: "Não foi possível salvar o novo corte.")
     }
 
@@ -273,9 +275,10 @@ final class AppModel {
         }
         let midpoint = clip.start + clip.duration / 2
         let originalEnd = clip.end
-        let secondImpactCount = max(1, clip.impactCount / 2)
+        let originalImpactCount = clip.impactCount
+        let secondImpactCount = originalImpactCount / 2
         clip.end = midpoint
-        clip.impactCount = max(1, clip.impactCount - secondImpactCount)
+        clip.impactCount = originalImpactCount - secondImpactCount
         for existing in session.clips where existing.order > clip.order {
             existing.order += 1
         }
@@ -285,11 +288,12 @@ final class AppModel {
             start: midpoint,
             end: originalEnd,
             impactCount: secondImpactCount,
-            confidence: clip.confidence
+            confidence: clip.confidence,
+            decision: clip.decision
         )
         context.insert(secondClip)
         session.clips.append(secondClip)
-        session.status = .reviewing
+        session.status = session.pendingClipCount == 0 ? .ready : .reviewing
         return save(context, failureMessage: "Não foi possível dividir a jogada.")
     }
 
@@ -307,16 +311,19 @@ final class AppModel {
             return false
         }
         let next = clips[index + 1]
+        guard next.decision == clip.decision else {
+            notice = .warning("Para unir, coloque as duas jogadas no mesmo grupo primeiro.")
+            return false
+        }
         clip.end = max(clip.end, next.end)
         clip.impactCount += next.impactCount
         clip.confidence = (clip.confidence + next.confidence) / 2
-        clip.decision = .pending
         session.clips.removeAll { $0.id == next.id }
         context.delete(next)
         for (order, existing) in session.sortedClips.enumerated() {
             existing.order = order
         }
-        session.status = .reviewing
+        session.status = session.pendingClipCount == 0 ? .ready : .reviewing
         return save(context, failureMessage: "Não foi possível unir as jogadas.")
     }
 

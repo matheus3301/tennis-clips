@@ -2,6 +2,7 @@ import SwiftData
 import SwiftUI
 
 struct ClipTrimSelection: Identifiable {
+    let session: TennisSession
     let clip: RallyClip
     let sourceURL: URL
     let videoDuration: TimeInterval
@@ -98,6 +99,7 @@ struct ClipTrimView: View {
             selection.clip,
             start: start,
             end: end,
+            in: selection.session,
             context: modelContext
         ) {
             dismiss()

@@ -26,7 +26,7 @@ struct CompletedSessionView: View {
                         ShareLink(item: outputURL) { Label("Compartilhar", systemImage: "square.and.arrow.up") }
                             .buttonStyle(QuietActionButtonStyle())
                     }
-                    NavigationLink(value: AppRoute.review(session.id)) { Label("Rever jogadas e cortes", systemImage: "slider.horizontal.3") }
+                    NavigationLink(value: AppRoute.montage(session.id)) { Label("Rever jogadas e cortes", systemImage: "rectangle.grid.2x2") }
                         .buttonStyle(QuietActionButtonStyle())
                     Button { model.compile(session, context: modelContext) } label: { Label("Montar novamente", systemImage: "arrow.clockwise") }
                         .buttonStyle(PrimaryActionButtonStyle())
