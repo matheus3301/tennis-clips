@@ -2,6 +2,8 @@ import BackgroundTasks
 import Foundation
 
 struct ContinuedProcessingService: Sendable {
+    static let launchQueue = DispatchQueue.main
+
     private let identifierPrefix = "dev.mmonteiro.tennisclips.processing"
 
     func perform(
@@ -21,7 +23,7 @@ struct ContinuedProcessingService: Sendable {
         await withCheckedContinuation { continuation in
             let registered = BGTaskScheduler.shared.register(
                 forTaskWithIdentifier: identifier,
-                using: nil
+                using: Self.launchQueue
             ) { task in
                 guard let continuedTask = task as? BGContinuedProcessingTask else {
                     task.setTaskCompleted(success: false)

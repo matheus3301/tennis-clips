@@ -111,6 +111,18 @@ final class AppSmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testContinuedProcessingLaunchHandlerUsesMainQueue() async {
+        let callback = expectation(description: "continued processing launch callback")
+
+        ContinuedProcessingService.launchQueue.async {
+            XCTAssertTrue(Thread.isMainThread)
+            callback.fulfill()
+        }
+
+        await fulfillment(of: [callback], timeout: 1)
+    }
+
+    @MainActor
     func testAnalysisKeepsValidClipsWhenOneVideoFails() async throws {
         let container = try ModelContainer(
             for: TennisSession.self,
