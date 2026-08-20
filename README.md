@@ -17,10 +17,14 @@ tennis-clips/
 ```mermaid
 flowchart LR
     A[Vídeo no iPhone] --> B[AVAssetReader]
-    B --> C[Áudio PCM]
-    C --> D[FFT + regras espectrais]
-    D --> E[Impactos]
-    E --> F[Janelas de rally]
+    B --> C[Áudio PCM 16 kHz]
+    C --> D[Butterworth + RMS + picos]
+    A --> V[Quadros ao redor dos candidatos]
+    D --> E[Regras espectrais]
+    V --> M[Validação por movimento]
+    E --> M
+    M --> F0[Impactos]
+    F0 --> F[Janelas de rally]
     A --> G[AVMutableComposition]
     F --> G
     G --> H[MP4 local]
@@ -31,6 +35,9 @@ flowchart LR
       C
       D
       E
+      V
+      M
+      F0
       F
       G
       H
@@ -43,7 +50,8 @@ O cliente nativo está em [`ios`](ios/README.md). Ele já
 contém:
 
 - importação por PhotosPicker;
-- análise espectral on-device com AVFoundation e Accelerate;
+- detector Butterworth/RMS on-device portado da implementação SciPy;
+- validação visual por movimento em três quadros;
 - planejamento das janelas contextuais;
 - montagem e exportação local;
 - reprodução e compartilhamento do resultado;

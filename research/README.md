@@ -42,4 +42,16 @@ As métricas não devem migrar para o app sem nova validação.
 uv run --project research python -m unittest discover -s research/tests
 ```
 
+Os scripts em `scripts/` comparam o detector de referência com o núcleo Swift
+usando as mesmas amostras e os mesmos timestamps:
+
+```bash
+uv run --project research python research/scripts/check_ios_signal_parity.py \
+  .tennis-clips-cache/IMG_2842-mono-16000.wav
+
+uv run --project research python research/scripts/check_ios_motion_parity.py \
+  ~/Downloads/IMG_2842.MOV \
+  .tennis-clips-cache/IMG_2842-mono-16000.wav
+```
+
 Vídeos, modelos, caches e outputs continuam ignorados pelo Git.

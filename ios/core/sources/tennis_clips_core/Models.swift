@@ -7,6 +7,7 @@ public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
     public let amplitude: Double
     public let midEnergyRatio: Double
     public let highEnergyRatio: Double
+    public let motionRatio: Double
 
     public init(
         id: UUID = UUID(),
@@ -14,7 +15,8 @@ public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
         score: Double,
         amplitude: Double,
         midEnergyRatio: Double,
-        highEnergyRatio: Double
+        highEnergyRatio: Double,
+        motionRatio: Double = 0
     ) {
         self.id = id
         self.time = time
@@ -22,6 +24,7 @@ public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
         self.amplitude = amplitude
         self.midEnergyRatio = midEnergyRatio
         self.highEnergyRatio = highEnergyRatio
+        self.motionRatio = motionRatio
     }
 }
 
