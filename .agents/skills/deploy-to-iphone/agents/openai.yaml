@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deploy to iPhone"
+  short_description: "Build and verify Tennis Clips on iPhone"
+  default_prompt: "Use $deploy-to-iphone to build, install, launch, and verify Tennis Clips on the connected iPhone."
