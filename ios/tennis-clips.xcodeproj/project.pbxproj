@@ -441,7 +441,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.matheus3301.tennisclips;
-				PRODUCT_NAME = "Tennis Clips";
+				PRODUCT_NAME = TennisClips;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -465,7 +465,7 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.matheus3301.tennisclips;
-				PRODUCT_NAME = "Tennis Clips";
+				PRODUCT_NAME = TennisClips;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

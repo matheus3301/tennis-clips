@@ -107,6 +107,7 @@ private struct CourtCard: View {
                         .font(.caption.weight(.bold))
                         .padding(.bottom, 5)
                 }
+                .padding(.horizontal, 8)
             }
             .foregroundStyle(AppPalette.line)
             .padding(22)

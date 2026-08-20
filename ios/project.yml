@@ -21,7 +21,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.matheus3301.tennisclips
-        PRODUCT_NAME: Tennis Clips
+        PRODUCT_NAME: TennisClips
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Tennis Clips

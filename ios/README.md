@@ -39,19 +39,15 @@ Requisitos:
 - iOS 17 ou mais recente;
 - assinatura Apple configurada apenas para instalar em um iPhone físico.
 
-Neste Mac, o Xcode atual da App Store exige uma versão mais nova do macOS. O
-Xcode 16.4 pode ser instalado pelo utilitário `xcodes`, já preparado na máquina:
+Se as ferramentas de linha de comando ainda apontarem para o pacote isolado,
+ative o Xcode completo e conclua sua preparação inicial:
 
 ```bash
-xcodes install 16.4 \
-  --directory ~/Applications \
-  --no-superuser \
-  --experimental-unxip
+sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+sudo xcodebuild -runFirstLaunch
 ```
 
-Esse comando pede a autenticação do Apple ID diretamente no terminal. Depois da
-instalação, aponte `DEVELOPER_DIR` para o diretório `Contents/Developer` do Xcode
-instalado e rode o projeto sem alterar globalmente o `xcode-select`.
+O app foi validado no Xcode 26.6 com um iPhone 17 Pro no iOS Simulator 26.5.
 
 O pacote `core/` contém modelos e a lógica pura de montagem dos rallies. Ele pode
 ser testado sem Xcode:

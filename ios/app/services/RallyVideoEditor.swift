@@ -2,6 +2,14 @@
 import Foundation
 import TennisClipsCore
 
+private final class ExportSessionBox: @unchecked Sendable {
+    let session: AVAssetExportSession
+
+    init(_ session: AVAssetExportSession) {
+        self.session = session
+    }
+}
+
 actor RallyVideoEditor {
     func export(asset: AVAsset, clips: [ClipRange], to outputURL: URL) async throws {
         let sourceVideoTracks = try await asset.loadTracks(withMediaType: .video)
@@ -43,16 +51,21 @@ actor RallyVideoEditor {
         } else {
             exporter.outputURL = outputURL
             exporter.outputFileType = .mp4
+            let box = ExportSessionBox(exporter)
             try await withCheckedThrowingContinuation {
                 (continuation: CheckedContinuation<Void, Error>) in
                 exporter.exportAsynchronously {
-                    switch exporter.status {
+                    switch box.session.status {
                     case .completed:
                         continuation.resume()
                     case .failed, .cancelled:
-                        continuation.resume(throwing: ProcessingError.exportFailed(exporter.error))
+                        continuation.resume(
+                            throwing: ProcessingError.exportFailed(box.session.error)
+                        )
                     default:
-                        continuation.resume(throwing: ProcessingError.exportFailed(exporter.error))
+                        continuation.resume(
+                            throwing: ProcessingError.exportFailed(box.session.error)
+                        )
                     }
                 }
             }
