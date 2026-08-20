@@ -65,6 +65,52 @@ final class AppSmokeTests: XCTestCase {
     }
 
     @MainActor
+    func testCreatingFirstSessionPreparesStorageBeforeCapacityValidation() throws {
+        let sandboxRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let storageRoot = sandboxRoot
+            .appendingPathComponent("TennisClips", isDirectory: true)
+            .appendingPathComponent("Sessions", isDirectory: true)
+        let sourceURL = sandboxRoot.appendingPathComponent("selected.mov")
+        try FileManager.default.createDirectory(
+            at: sandboxRoot,
+            withIntermediateDirectories: true
+        )
+        try Data([0]).write(to: sourceURL)
+        defer { try? FileManager.default.removeItem(at: sandboxRoot) }
+
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: storageRoot.deletingLastPathComponent().path
+        ))
+
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let model = AppModel(
+            analyzer: StubAnalyzer(),
+            storage: SessionStorage(rootURL: storageRoot)
+        )
+
+        let session = try model.createSession(
+            kind: .practice,
+            title: "Primeiro treino",
+            opponent: "",
+            playedAt: .now,
+            movies: [ImportedMovie(url: sourceURL, originalName: "selected.mov")],
+            context: container.mainContext
+        )
+
+        model.cancelProcessing(session, context: container.mainContext)
+        XCTAssertTrue(FileManager.default.fileExists(
+            atPath: storageRoot.deletingLastPathComponent().path
+        ))
+        XCTAssertEqual(session.videos.count, 1)
+    }
+
+    @MainActor
     func testAnalysisKeepsValidClipsWhenOneVideoFails() async throws {
         let container = try ModelContainer(
             for: TennisSession.self,

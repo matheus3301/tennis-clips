@@ -75,8 +75,8 @@ final class AppModel {
         )
         context.insert(session)
         do {
-            try storage.validateCapacity(for: movies)
             try storage.prepareSession(session.id)
+            try storage.validateCapacity(for: movies)
             for (index, movie) in movies.enumerated() {
                 let relativePath = try storage.persist(movie, sessionID: session.id, order: index)
                 session.videos.append(SessionVideo(
