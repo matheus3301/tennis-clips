@@ -64,7 +64,7 @@ struct HomeView: View {
                 defer { isLoadingSelection = false }
                 do {
                     if let movie = try await item.loadTransferable(type: ImportedMovie.self) {
-                        model.process(videoAt: movie.url)
+                        model.process(movie: movie)
                     }
                 } catch {
                     model.reportFailure(error)

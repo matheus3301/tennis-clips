@@ -1,7 +1,7 @@
 # Tennis Clips
 
 Aplicativo para transformar uma gravação longa de tênis em um vídeo curto e
-fluido das jogadas. A versão para iPhone está sendo construída em Swift e faz
+fluido das jogadas. A versão para iPhone é nativa em Swift e faz
 todo o processamento no próprio aparelho — sem backend e sem upload do treino.
 
 ## Estrutura
@@ -73,5 +73,6 @@ uv sync --project research
 uv run --project research tennis-clips make ~/Downloads/IMG_2842.MOV --mode rallies
 ```
 
-As tags `v0.1.0`, `v0.2.0` e `v0.3.0` preservam os marcos anteriores. Vídeos,
-outputs e caches são ignorados pelo Git para não publicar gravações pessoais.
+As tags `v0.1.0`, `v0.2.0` e `v0.3.0` preservam os marcos de pesquisa. A tag
+`ios-v0.1.0` preserva a primeira versão estável do aplicativo. Vídeos, outputs e
+caches são ignorados pelo Git para não publicar gravações pessoais.

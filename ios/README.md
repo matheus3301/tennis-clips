@@ -3,6 +3,13 @@
 Aplicativo nativo SwiftUI que executa todo o pipeline no próprio iPhone. Não há
 backend, upload nem dependência do projeto Python em runtime.
 
+## V0 estável
+
+A versão `0.1.0 (1)` congela o primeiro produto iOS: escolher um vídeo,
+detectar impactos, montar rallies contextuais, revisar e compartilhar o MP4.
+Imports, exports parciais e resultados descartados usam armazenamento temporário
+e são removidos automaticamente. Analytics de golpes continuam fora desta V0.
+
 ## Pipeline on-device
 
 ```mermaid
@@ -47,7 +54,8 @@ A etapa visual pode ser auditada candidato a candidato:
 ```bash
 uv run --project research python research/scripts/check_ios_motion_parity.py \
   ~/Downloads/IMG_2842.MOV \
-  .tennis-clips-cache/IMG_2842-mono-16000.wav
+  .tennis-clips-cache/IMG_2842-mono-16000.wav \
+  --allow-decoder-variance 2
 ```
 
 AVFoundation e FFmpeg podem decodificar alguns pixels de forma ligeiramente
@@ -81,8 +89,8 @@ sudo xcodebuild -runFirstLaunch
 
 O app foi validado no Xcode 26.6 com um iPhone 17 Pro no iOS Simulator 26.5.
 
-O pacote `core/` contém modelos e a lógica pura de montagem dos rallies. Ele pode
-ser testado sem Xcode:
+O pacote `core/` contém modelos, detecção e montagem dos rallies. Ele pode ser
+testado separadamente do projeto do aplicativo:
 
 ```bash
 swift test --package-path ios/core

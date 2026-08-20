@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import argparse
 import json
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
@@ -12,12 +12,18 @@ from tennis_clips.detector import DetectorConfig, audio_candidates, motion_ratio
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("usage: check_ios_motion_parity.py <video> <mono-16000.wav>", file=sys.stderr)
-        return 2
-
-    video_path = Path(sys.argv[1]).resolve()
-    wav_path = Path(sys.argv[2]).resolve()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("video", type=Path)
+    parser.add_argument("wav", type=Path)
+    parser.add_argument(
+        "--allow-decoder-variance",
+        type=int,
+        default=0,
+        help="maximum AVFoundation/FFmpeg decision differences allowed",
+    )
+    args = parser.parse_args()
+    video_path = args.video.resolve()
+    wav_path = args.wav.resolve()
     config = DetectorConfig()
     candidates = audio_candidates(wav_path, config)
     times = [candidate["time"] for candidate in candidates]
@@ -63,25 +69,6 @@ def main() -> int:
     finally:
         capture.release()
 
-    for threshold in (0.05, 0.06, 0.07, 0.075, 0.08, 0.085, 0.09, 0.10):
-        python_decisions = [row[1] >= threshold for row in rows]
-        swift_decisions = [row[2] >= threshold for row in rows]
-        differences = sum(a != b for a, b in zip(python_decisions, swift_decisions, strict=True))
-        print(
-            f"threshold={threshold:.3f} "
-            f"Python={sum(python_decisions)} Swift={sum(swift_decisions)} "
-            f"differences={differences}"
-        )
-        if threshold in (0.07, 0.075):
-            for row, python_ok, swift_ok in zip(
-                rows, python_decisions, swift_decisions, strict=True
-            ):
-                if python_ok != swift_ok:
-                    print(
-                        f"  {row[0]:8.3f}s Python={row[1]:.6f} "
-                        f"Swift={row[2]:.6f}"
-                    )
-
     disagreements = [row for row in rows if row[3] != row[4]]
     print(
         f"Python accepted {sum(row[3] for row in rows)}; "
@@ -93,7 +80,13 @@ def main() -> int:
             f"{time:8.3f}s Python={python_ratio:.6f} ({python_ok}) "
             f"Swift={swift_ratio:.6f} ({swift_ok})"
         )
-    return 0 if not disagreements else 1
+    if len(disagreements) <= args.allow_decoder_variance:
+        print(
+            f"PASS: {len(disagreements)} differences within allowed decoder variance "
+            f"of {args.allow_decoder_variance}"
+        )
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

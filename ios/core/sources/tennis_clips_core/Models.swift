@@ -1,7 +1,6 @@
 import Foundation
 
-public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
-    public let id: UUID
+public struct ImpactEvent: Codable, Equatable, Sendable {
     public let time: TimeInterval
     public let score: Double
     public let amplitude: Double
@@ -10,7 +9,6 @@ public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
     public let motionRatio: Double
 
     public init(
-        id: UUID = UUID(),
         time: TimeInterval,
         score: Double,
         amplitude: Double,
@@ -18,7 +16,6 @@ public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
         highEnergyRatio: Double,
         motionRatio: Double = 0
     ) {
-        self.id = id
         self.time = time
         self.score = score
         self.amplitude = amplitude
@@ -28,39 +25,28 @@ public struct ImpactEvent: Codable, Equatable, Identifiable, Sendable {
     }
 }
 
-public struct ClipRange: Codable, Equatable, Identifiable, Sendable {
-    public let id: UUID
+public struct ClipRange: Codable, Equatable, Sendable {
     public let start: TimeInterval
     public let end: TimeInterval
 
     public var duration: TimeInterval { end - start }
 
-    public init(id: UUID = UUID(), start: TimeInterval, end: TimeInterval) {
-        self.id = id
+    public init(start: TimeInterval, end: TimeInterval) {
         self.start = start
         self.end = end
     }
 }
 
-public struct TrainingSession: Identifiable, Sendable {
-    public let id: UUID
-    public let createdAt: Date
-    public let sourceURL: URL
+public struct TrainingSession: Sendable {
     public let outputURL: URL
     public let impacts: [ImpactEvent]
     public let clips: [ClipRange]
 
     public init(
-        id: UUID = UUID(),
-        createdAt: Date = Date(),
-        sourceURL: URL,
         outputURL: URL,
         impacts: [ImpactEvent],
         clips: [ClipRange]
     ) {
-        self.id = id
-        self.createdAt = createdAt
-        self.sourceURL = sourceURL
         self.outputURL = outputURL
         self.impacts = impacts
         self.clips = clips

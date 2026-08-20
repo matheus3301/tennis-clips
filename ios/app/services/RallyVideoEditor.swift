@@ -39,15 +39,16 @@ actor RallyVideoEditor {
             cursor = cursor + range.duration
         }
 
-        try? FileManager.default.removeItem(at: outputURL)
         guard let exporter = AVAssetExportSession(
             asset: composition,
             presetName: AVAssetExportPresetHighestQuality
         ) else { throw ProcessingError.cannotCreateExport }
-        exporter.shouldOptimizeForNetworkUse = true
-
         if #available(iOS 18.0, macOS 15.0, *) {
-            try await exporter.export(to: outputURL, as: .mp4)
+            do {
+                try await exporter.export(to: outputURL, as: .mp4)
+            } catch {
+                throw ProcessingError.exportFailed(error)
+            }
         } else {
             exporter.outputURL = outputURL
             exporter.outputFileType = .mp4

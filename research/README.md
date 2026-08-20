@@ -51,7 +51,8 @@ uv run --project research python research/scripts/check_ios_signal_parity.py \
 
 uv run --project research python research/scripts/check_ios_motion_parity.py \
   ~/Downloads/IMG_2842.MOV \
-  .tennis-clips-cache/IMG_2842-mono-16000.wav
+  .tennis-clips-cache/IMG_2842-mono-16000.wav \
+  --allow-decoder-variance 2
 ```
 
 Vídeos, modelos, caches e outputs continuam ignorados pelo Git.

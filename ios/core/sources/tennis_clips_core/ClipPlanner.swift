@@ -24,7 +24,6 @@ public struct ClipPlanner: Sendable {
 
             if let previous = result.last, start <= previous.end + mergeGap {
                 result[result.count - 1] = ClipRange(
-                    id: previous.id,
                     start: previous.start,
                     end: max(previous.end, end)
                 )

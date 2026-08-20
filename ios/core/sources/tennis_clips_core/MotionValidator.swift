@@ -3,32 +3,17 @@ import CoreGraphics
 import Foundation
 
 /// On-device port of the OpenCV movement gate used by the Python detector.
-public struct MotionValidator: Sendable {
+private struct MotionValidator: Sendable {
     private let width = 270
     private let height = 480
     private let pixelThreshold = 25
     private let shirtHueRange = 18...42
 
-    public init() {}
-
-    public func motionRatio(
-        in asset: AVAsset,
+    fileprivate func motionRatio(
+        using generator: AVAssetImageGenerator,
         at time: TimeInterval,
         offset: TimeInterval
     ) throws -> Double {
-        try measurement(in: asset, at: time, offset: offset).ratio
-    }
-
-    public func measurement(
-        in asset: AVAsset,
-        at time: TimeInterval,
-        offset: TimeInterval
-    ) throws -> MotionMeasurement {
-        let generator = AVAssetImageGenerator(asset: asset)
-        generator.appliesPreferredTrackTransform = true
-        generator.requestedTimeToleranceBefore = .zero
-        generator.requestedTimeToleranceAfter = .zero
-
         let requestedTimes = [max(0, time - offset), time, time + offset]
         let frames = try requestedTimes.map { requestedTime in
             let image = try generator.copyCGImage(
@@ -52,13 +37,7 @@ public struct MotionValidator: Sendable {
                 total += 1
             }
         }
-        return MotionMeasurement(
-            ratio: total > 0 ? Double(changed) / Double(total) : 0,
-            minX: roi.minX,
-            minY: roi.minY,
-            maxX: roi.maxX,
-            maxY: roi.maxY
-        )
+        return total > 0 ? Double(changed) / Double(total) : 0
     }
 
     private func rgbaPixels(from image: CGImage) throws -> [UInt8] {
@@ -264,14 +243,25 @@ public struct MotionValidator: Sendable {
     }
 }
 
-public enum MotionValidationError: Error {
+private enum MotionValidationError: Error {
     case cannotReadFrame
 }
 
-public struct MotionMeasurement: Sendable {
-    public let ratio: Double
-    public let minX: Int
-    public let minY: Int
-    public let maxX: Int
-    public let maxY: Int
+/// Reuses one AVFoundation frame generator for all candidates in a training.
+/// Actor isolation prevents concurrent access to AVAssetImageGenerator.
+public actor MotionValidationSession {
+    private let generator: AVAssetImageGenerator
+    private let validator = MotionValidator()
+
+    public init(asset: AVAsset) {
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        self.generator = generator
+    }
+
+    public func motionRatio(at time: TimeInterval, offset: TimeInterval) throws -> Double {
+        try validator.motionRatio(using: generator, at: time, offset: offset)
+    }
 }

@@ -16,19 +16,15 @@ let timesData = if timesArgument.hasPrefix("[") {
 }
 let times = try JSONDecoder().decode([Double].self, from: timesData)
 let asset = AVURLAsset(url: videoURL)
-let validator = MotionValidator()
+let session = MotionValidationSession(asset: asset)
 var results: [[String: Double]] = []
 results.reserveCapacity(times.count)
 
 for time in times {
-    let measurement = try validator.measurement(in: asset, at: time, offset: 0.05)
+    let ratio = try await session.motionRatio(at: time, offset: 0.05)
     results.append([
         "time": time,
-        "motion_ratio": measurement.ratio,
-        "roi_min_x": Double(measurement.minX),
-        "roi_min_y": Double(measurement.minY),
-        "roi_max_x": Double(measurement.maxX),
-        "roi_max_y": Double(measurement.maxY),
+        "motion_ratio": ratio,
     ])
 }
 

@@ -7,7 +7,6 @@ actor ImpactDetector {
     private let sampleRate = 16_000.0
     private let minimumMotionRatio = 0.08
     private let signalDetector = ImpactSignalDetector()
-    private let motionValidator = MotionValidator()
 
     func detect(
         in asset: AVAsset,
@@ -24,15 +23,16 @@ actor ImpactDetector {
         }.value
         await progress(0.64)
 
+        let motionSession = MotionValidationSession(asset: asset)
         var events: [ImpactEvent] = []
         events.reserveCapacity(candidates.count)
         for (index, candidate) in candidates.enumerated() {
             try Task.checkCancellation()
-            let movement = try motionValidator.motionRatio(
-                in: asset,
+            // Missing edge frames are rejected, matching the Python detector.
+            let movement = (try? await motionSession.motionRatio(
                 at: candidate.time,
                 offset: 0.05
-            )
+            )) ?? 0
             if movement >= minimumMotionRatio {
                 let amplitudeScore = candidate.amplitude / candidate.threshold
                 let spectralScore = min(2, candidate.midEnergyRatio / 0.15)
