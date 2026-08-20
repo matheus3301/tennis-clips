@@ -45,13 +45,29 @@ public struct ImpactSignalDetector: Sendable {
         self.config = config
     }
 
-    public func candidates(samples: [Float]) -> [Candidate] {
-        guard samples.count > 55 else { return [] }
+    public func candidates(
+        samples: [Float],
+        progress: (Double) -> Void = { _ in }
+    ) -> [Candidate] {
+        progress(0)
+        guard samples.count > 55 else {
+            progress(1)
+            return []
+        }
 
-        let full = envelope(samples: samples, band: Self.fullBand)
-        let mid = envelope(samples: samples, band: Self.midBand)
-        let high = envelope(samples: samples, band: Self.highBand)
-        guard !full.isEmpty, full.count == mid.count, mid.count == high.count else { return [] }
+        let full = envelope(samples: samples, band: Self.fullBand) { fraction in
+            progress(fraction * 0.3)
+        }
+        let mid = envelope(samples: samples, band: Self.midBand) { fraction in
+            progress(0.3 + fraction * 0.3)
+        }
+        let high = envelope(samples: samples, band: Self.highBand) { fraction in
+            progress(0.6 + fraction * 0.3)
+        }
+        guard !full.isEmpty, full.count == mid.count, mid.count == high.count else {
+            progress(1)
+            return []
+        }
 
         let threshold = percentile(full, percentile: config.amplitudePercentile)
         let minimumDistance = Int((config.minimumEventDistance * Double(config.analysisRate)).rounded())
@@ -61,8 +77,9 @@ public struct ImpactSignalDetector: Sendable {
             minimumDistance: minimumDistance,
             minimumProminence: threshold * 0.5
         )
+        progress(0.95)
 
-        return peakIndexes.compactMap { index in
+        let candidates: [Candidate] = peakIndexes.compactMap { index in
             let amplitude = max(full[index], 1e-9)
             let midRatio = pow(mid[index] / amplitude, 2)
             let highRatio = pow(high[index] / amplitude, 2)
@@ -78,13 +95,31 @@ public struct ImpactSignalDetector: Sendable {
                 highEnergyRatio: highRatio
             )
         }
+        progress(1)
+        return candidates
     }
 
-    private func envelope(samples: [Float], band: Band) -> [Double] {
+    private func envelope(
+        samples: [Float],
+        band: Band,
+        progress: (Double) -> Void
+    ) -> [Double] {
         var filtered = oddExtension(samples, edge: 27)
-        filterInPlace(&filtered, sections: band.sections, initialScale: filtered[0])
+        filterInPlace(
+            &filtered,
+            sections: band.sections,
+            initialScale: filtered[0]
+        ) { fraction in
+            progress(fraction * 0.4)
+        }
         filtered.reverse()
-        filterInPlace(&filtered, sections: band.sections, initialScale: filtered[0])
+        filterInPlace(
+            &filtered,
+            sections: band.sections,
+            initialScale: filtered[0]
+        ) { fraction in
+            progress(0.4 + fraction * 0.4)
+        }
         filtered.reverse()
 
         let edge = 27
@@ -93,12 +128,14 @@ public struct ImpactSignalDetector: Sendable {
         let leftRadius = windowSize / 2
         let rightRadius = windowSize - leftRadius - 1
         let step = max(1, Int((Double(config.sampleRate) / Double(config.analysisRate)).rounded()))
+        let totalSteps = max(1, (signalCount + step - 1) / step)
         var result: [Double] = []
-        result.reserveCapacity((signalCount + step - 1) / step)
+        result.reserveCapacity(totalSteps)
+        var lastReportedProgress = 0.0
 
         // sqrt(convolve(filtered², flat(128), mode: "same"))[::80].
         // Only the requested 200 Hz samples are materialized to reduce memory use.
-        for center in stride(from: 0, to: signalCount, by: step) {
+        for (stepIndex, center) in stride(from: 0, to: signalCount, by: step).enumerated() {
             let lower = max(0, center - leftRadius)
             let upper = min(signalCount - 1, center + rightRadius)
             var sum = 0.0
@@ -107,6 +144,11 @@ public struct ImpactSignalDetector: Sendable {
                 sum += value * value
             }
             result.append(sqrt(sum / Double(windowSize)))
+            let currentProgress = Double(stepIndex + 1) / Double(totalSteps)
+            if currentProgress >= 1 || currentProgress - lastReportedProgress >= 0.05 {
+                lastReportedProgress = currentProgress
+                progress(0.8 + currentProgress * 0.2)
+            }
         }
         return result
     }
@@ -132,9 +174,10 @@ public struct ImpactSignalDetector: Sendable {
     private func filterInPlace(
         _ values: inout [Double],
         sections: [Section],
-        initialScale: Double
+        initialScale: Double,
+        progress: (Double) -> Void
     ) {
-        for section in sections {
+        for (sectionIndex, section) in sections.enumerated() {
             var state1 = section.z1 * initialScale
             var state2 = section.z2 * initialScale
             for index in values.indices {
@@ -144,6 +187,7 @@ public struct ImpactSignalDetector: Sendable {
                 state2 = section.b2 * input - section.a2 * output
                 values[index] = output
             }
+            progress(Double(sectionIndex + 1) / Double(max(sections.count, 1)))
         }
     }
 

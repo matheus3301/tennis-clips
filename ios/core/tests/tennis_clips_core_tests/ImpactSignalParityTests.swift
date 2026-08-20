@@ -38,3 +38,17 @@ import Testing
         #expect(abs(candidate.time - reference) <= 0.005)
     }
 }
+
+@Test func signalDetectorReportsMonotonicIntermediateProgress() {
+    let samples = [Float](repeating: 0, count: 16_000)
+    var updates: [Double] = []
+
+    _ = ImpactSignalDetector().candidates(samples: samples) { fraction in
+        updates.append(fraction)
+    }
+
+    #expect(updates.first == 0)
+    #expect(updates.last == 1)
+    #expect(updates == updates.sorted())
+    #expect(updates.contains { 0.2 < $0 && $0 < 0.9 })
+}

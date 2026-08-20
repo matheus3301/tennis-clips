@@ -18,9 +18,22 @@ actor ImpactDetector {
 
         await progress(0.2)
         let detector = signalDetector
-        let candidates = await Task.detached(priority: .userInitiated) {
-            detector.candidates(samples: samples)
-        }.value
+        let (progressUpdates, progressContinuation) = AsyncStream.makeStream(
+            of: Double.self,
+            bufferingPolicy: .bufferingNewest(1)
+        )
+        let candidateTask = Task.detached(priority: .userInitiated) {
+            defer { progressContinuation.finish() }
+            return detector.candidates(samples: samples) { fraction in
+                progressContinuation.yield(fraction)
+            }
+        }
+        defer { candidateTask.cancel() }
+        for await fraction in progressUpdates {
+            try Task.checkCancellation()
+            await progress(0.2 + fraction * 0.44)
+        }
+        let candidates = await candidateTask.value
         await progress(0.64)
 
         let motionSession = MotionValidationSession(asset: asset)
