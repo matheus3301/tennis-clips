@@ -1,0 +1,61 @@
+@preconcurrency import AVFoundation
+import Foundation
+import TennisClipsCore
+
+actor RallyVideoEditor {
+    func export(asset: AVAsset, clips: [ClipRange], to outputURL: URL) async throws {
+        let sourceVideoTracks = try await asset.loadTracks(withMediaType: .video)
+        guard let sourceVideo = sourceVideoTracks.first else { throw ProcessingError.noVideo }
+        let sourceAudio = try await asset.loadTracks(withMediaType: .audio).first
+        let composition = AVMutableComposition()
+        guard let videoTrack = composition.addMutableTrack(
+            withMediaType: .video,
+            preferredTrackID: kCMPersistentTrackID_Invalid
+        ) else { throw ProcessingError.cannotCreateExport }
+        let audioTrack = composition.addMutableTrack(
+            withMediaType: .audio,
+            preferredTrackID: kCMPersistentTrackID_Invalid
+        )
+        videoTrack.preferredTransform = try await sourceVideo.load(.preferredTransform)
+
+        var cursor = CMTime.zero
+        for clip in clips {
+            let range = CMTimeRange(
+                start: CMTime(seconds: clip.start, preferredTimescale: 600),
+                duration: CMTime(seconds: clip.duration, preferredTimescale: 600)
+            )
+            try videoTrack.insertTimeRange(range, of: sourceVideo, at: cursor)
+            if let sourceAudio, let audioTrack {
+                try audioTrack.insertTimeRange(range, of: sourceAudio, at: cursor)
+            }
+            cursor = cursor + range.duration
+        }
+
+        try? FileManager.default.removeItem(at: outputURL)
+        guard let exporter = AVAssetExportSession(
+            asset: composition,
+            presetName: AVAssetExportPresetHighestQuality
+        ) else { throw ProcessingError.cannotCreateExport }
+        exporter.shouldOptimizeForNetworkUse = true
+
+        if #available(iOS 18.0, macOS 15.0, *) {
+            try await exporter.export(to: outputURL, as: .mp4)
+        } else {
+            exporter.outputURL = outputURL
+            exporter.outputFileType = .mp4
+            try await withCheckedThrowingContinuation {
+                (continuation: CheckedContinuation<Void, Error>) in
+                exporter.exportAsynchronously {
+                    switch exporter.status {
+                    case .completed:
+                        continuation.resume()
+                    case .failed, .cancelled:
+                        continuation.resume(throwing: ProcessingError.exportFailed(exporter.error))
+                    default:
+                        continuation.resume(throwing: ProcessingError.exportFailed(exporter.error))
+                    }
+                }
+            }
+        }
+    }
+}

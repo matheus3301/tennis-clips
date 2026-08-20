@@ -67,6 +67,7 @@ def _parser() -> argparse.ArgumentParser:
                            default=Path(".tennis-clips-models/pose_landmarker_full.task"))
     analytics.add_argument("--handedness", choices=("right", "left"), default="right")
     analytics.add_argument("--no-overlay", action="store_true")
+
     return parser
 
 

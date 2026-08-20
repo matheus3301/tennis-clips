@@ -2,6 +2,7 @@
 __pycache__/
 *.py[oc]
 build/
+.build/
 dist/
 wheels/
 *.egg-info
@@ -19,3 +20,8 @@ outputs/
 *.MOV
 *.mov
 .DS_Store
+
+# Xcode local state
+DerivedData/
+xcuserdata/
+*.xcuserstate
