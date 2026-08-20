@@ -8,9 +8,8 @@ todo o processamento no próprio aparelho — sem backend e sem upload do treino
 
 ```text
 tennis-clips/
-├── ios/
-│   └── tennis-clips/    aplicativo SwiftUI e pipeline AVFoundation
-└── research/            protótipo e experimentos em Python
+├── ios/         aplicativo SwiftUI e pipeline AVFoundation
+└── research/    protótipo e experimentos em Python
 ```
 
 ## Arquitetura do produto
@@ -40,7 +39,7 @@ flowchart LR
 
 ## iPhone
 
-O cliente nativo está em [`ios/tennis-clips`](ios/tennis-clips/README.md). Ele já
+O cliente nativo está em [`ios`](ios/README.md). Ele já
 contém:
 
 - importação por PhotosPicker;
@@ -51,7 +50,7 @@ contém:
 - pacote de domínio com testes independentes do Xcode.
 
 ```bash
-cd ios/tennis-clips
+cd ios
 xcodegen generate
 open tennis-clips.xcodeproj
 ```

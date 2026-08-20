@@ -28,7 +28,7 @@ viram janelas de rally de 1,2 s antes e 2,6 s depois, unidas quando se sobrepõe
 O projeto é gerado por XcodeGen:
 
 ```bash
-cd ios/tennis-clips
+cd ios
 xcodegen generate
 open tennis-clips.xcodeproj
 ```
@@ -57,7 +57,7 @@ O pacote `core/` contém modelos e a lógica pura de montagem dos rallies. Ele p
 ser testado sem Xcode:
 
 ```bash
-swift test --package-path ios/tennis-clips/core
+swift test --package-path ios/core
 ```
 
 ## Estado da implementação
