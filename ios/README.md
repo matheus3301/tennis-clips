@@ -3,12 +3,16 @@
 Aplicativo nativo SwiftUI que executa todo o pipeline no próprio iPhone. Não há
 backend, upload nem dependência do projeto Python em runtime.
 
-## V0 estável
+## Experiência de produto
 
-A versão `0.1.0 (1)` congela o primeiro produto iOS: escolher um vídeo,
-detectar impactos, montar rallies contextuais, revisar e compartilhar o MP4.
-Imports, exports parciais e resultados descartados usam armazenamento temporário
-e são removidos automaticamente. Analytics de golpes continuam fora desta V0.
+A versão `0.2.0 (1)` organiza o processamento em jogos e treinos persistentes.
+Cada sessão pode receber várias gravações, mantém as jogadas detectadas no
+histórico e oferece uma revisão rápida: deslize para incluir ou descartar, ou
+salve uma jogada específica diretamente nas Fotos. Ao final, o app monta uma
+compilação apenas com as escolhas do jogador.
+
+O escopo atual não inclui analytics. A prioridade é tornar impecável a jornada
+gravação → detecção → curadoria → vídeo final → histórico.
 
 ## Pipeline on-device
 
@@ -23,10 +27,11 @@ flowchart LR
     E --> M
     M --> F[ClipPlanner]
     A --> G[AVMutableComposition]
-    F --> G
+    F --> R[Revisão por cards]
+    R --> G
     G --> H[AVAssetExportSession]
     H --> I[MP4 local]
-    I --> J[Revisar e compartilhar]
+    I --> J[Salvar, compartilhar e rever no histórico]
 ```
 
 O detector nativo é um porte direto da versão Python validada. Ele usa os mesmos
@@ -98,10 +103,15 @@ swift test --package-path ios/core
 
 ## Estado da implementação
 
-- importação de vídeo com PhotosPicker;
+- biblioteca persistente de jogos e treinos com SwiftData;
+- importação de até oito gravações por sessão com PhotosPicker;
 - detector de áudio portado com paridade numérica ao SciPy;
 - validação visual por movimento no aparelho;
 - criação e união das janelas de rally;
-- montagem e exportação local com AVFoundation;
-- reprodução, resumo e compartilhamento do resultado;
+- revisão por gesto ou botões, com desfazer e salvamento de jogadas individuais;
+- montagem multivídeo e exportação local com AVFoundation;
+- Live Activity e Dynamic Island em iOS 17–25;
+- processamento continuado iniciado pelo usuário no iOS 26+;
+- animação de processamento em Lottie com suporte a movimento reduzido;
+- reprodução, salvamento nas Fotos, compartilhamento e histórico;
 - sem rede e sem backend.

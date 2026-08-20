@@ -4,6 +4,12 @@ import UniformTypeIdentifiers
 
 struct ImportedMovie: Transferable {
     let url: URL
+    let originalName: String
+
+    init(url: URL, originalName: String? = nil) {
+        self.url = url
+        self.originalName = originalName ?? url.lastPathComponent
+    }
 
     func removeLocalCopy() {
         try? FileManager.default.removeItem(at: url)
@@ -16,19 +22,11 @@ struct ImportedMovie: Transferable {
             let folder = FileManager.default.temporaryDirectory
                 .appendingPathComponent("imports", isDirectory: true)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            if let staleImports = try? FileManager.default.contentsOfDirectory(
-                at: folder,
-                includingPropertiesForKeys: nil
-            ) {
-                for staleImport in staleImports {
-                    try? FileManager.default.removeItem(at: staleImport)
-                }
-            }
             let destination = folder
                 .appendingPathComponent(UUID().uuidString)
                 .appendingPathExtension(received.file.pathExtension.isEmpty ? "mov" : received.file.pathExtension)
             try FileManager.default.copyItem(at: received.file, to: destination)
-            return ImportedMovie(url: destination)
+            return ImportedMovie(url: destination, originalName: received.file.lastPathComponent)
         }
     }
 }

@@ -1,93 +1,75 @@
-import XCTest
+import SwiftData
 import TennisClipsCore
+import XCTest
 @testable import TennisClips
 
 final class AppSmokeTests: XCTestCase {
     @MainActor
-    func testAppStartsIdle() {
-        let model = AppModel()
-        if case .idle = model.phase {
-            return
-        }
-        XCTFail("The app should start idle")
+    func testSessionDefaultsToAnalyzing() {
+        let session = TennisSession(
+            kind: .match,
+            title: "Jogo de quinta",
+            playedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+
+        XCTAssertEqual(session.status, .analyzing)
+        XCTAssertEqual(session.displayTitle, "Jogo de quinta")
+        XCTAssertEqual(session.progress, 0)
     }
 
     @MainActor
-    func testSuccessfulProcessingCleansImportAndOutputWhenStartingOver() async throws {
-        let folder = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tennis-clips-tests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
-        let input = folder.appendingPathComponent("input.mov")
-        let output = folder.appendingPathComponent("output.mp4")
-        try Data().write(to: input)
-        try Data().write(to: output)
-        let session = TrainingSession(outputURL: output, impacts: [], clips: [])
-        let model = AppModel(processor: SuccessfulProcessor(session: session))
+    func testReviewBecomesReadyAfterEveryClipHasADecision() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let session = TennisSession(kind: .practice, title: "", playedAt: .now)
+        let videoID = UUID()
+        let first = RallyClip(
+            sourceVideoID: videoID,
+            order: 0,
+            start: 1,
+            end: 4,
+            impactCount: 2,
+            confidence: 1
+        )
+        let second = RallyClip(
+            sourceVideoID: videoID,
+            order: 1,
+            start: 6,
+            end: 10,
+            impactCount: 3,
+            confidence: 1
+        )
+        session.clips = [first, second]
+        context.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
 
-        model.process(movie: ImportedMovie(url: input))
+        model.decide(.kept, for: first, in: session, context: context)
+        XCTAssertEqual(session.status, .reviewing)
 
-        let completed = await waitUntil {
-            if case .completed = model.phase { return true }
-            return false
-        }
-        XCTAssertTrue(completed)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: input.path))
-
-        model.startOver()
-
-        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
-        if case .idle = model.phase { return }
-        XCTFail("The app should return to idle")
+        model.decide(.rejected, for: second, in: session, context: context)
+        XCTAssertEqual(session.status, .ready)
+        XCTAssertEqual(session.keptClips.map(\.id), [first.id])
     }
 
-    @MainActor
-    func testFailedProcessingCleansImportedMovie() async throws {
-        let input = FileManager.default.temporaryDirectory
-            .appendingPathComponent("tennis-clips-input-\(UUID().uuidString).mov")
-        try Data().write(to: input)
-        defer { try? FileManager.default.removeItem(at: input) }
-        let model = AppModel(processor: FailingProcessor())
-
-        model.process(movie: ImportedMovie(url: input))
-
-        let failed = await waitUntil {
-            if case .failed = model.phase { return true }
-            return false
-        }
-        XCTAssertTrue(failed)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: input.path))
-    }
-
-    @MainActor
-    private func waitUntil(
-        _ condition: @escaping @MainActor () -> Bool
-    ) async -> Bool {
-        for _ in 0..<100 {
-            if condition() { return true }
-            try? await Task.sleep(for: .milliseconds(10))
-        }
-        return false
+    func testImportedMoviePreservesDisplayName() {
+        let movie = ImportedMovie(
+            url: URL(fileURLWithPath: "/tmp/random.mov"),
+            originalName: "Quadra 1.MOV"
+        )
+        XCTAssertEqual(movie.originalName, "Quadra 1.MOV")
     }
 }
 
-private struct SuccessfulProcessor: TennisProcessing {
-    let session: TrainingSession
-
-    func process(
+private struct StubAnalyzer: TennisAnalyzing {
+    func analyze(
         videoAt url: URL,
         progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
-    ) async throws -> TrainingSession {
-        await progress(ProcessingUpdate(stage: .exporting, fraction: 1))
-        return session
-    }
-}
-
-private struct FailingProcessor: TennisProcessing {
-    func process(
-        videoAt url: URL,
-        progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
-    ) async throws -> TrainingSession {
-        throw ProcessingError.noAudio
+    ) async throws -> VideoAnalysis {
+        VideoAnalysis(duration: 0, impacts: [], clips: [])
     }
 }

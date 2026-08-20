@@ -1,11 +1,17 @@
 import Foundation
 import TennisClipsCore
 
-protocol TennisProcessing: Sendable {
-    func process(
+struct VideoAnalysis: Sendable {
+    let duration: TimeInterval
+    let impacts: [ImpactEvent]
+    let clips: [ClipRange]
+}
+
+protocol TennisAnalyzing: Sendable {
+    func analyze(
         videoAt url: URL,
         progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
-    ) async throws -> TrainingSession
+    ) async throws -> VideoAnalysis
 }
 
 enum ProcessingError: LocalizedError {

@@ -2,15 +2,14 @@
 import Foundation
 import TennisClipsCore
 
-actor OnDeviceTennisProcessor: TennisProcessing {
+actor OnDeviceTennisProcessor: TennisAnalyzing {
     private let detector = ImpactDetector()
-    private let editor = RallyVideoEditor()
     private let planner = ClipPlanner()
 
-    func process(
+    func analyze(
         videoAt url: URL,
         progress: @escaping @MainActor @Sendable (ProcessingUpdate) -> Void
-    ) async throws -> TrainingSession {
+    ) async throws -> VideoAnalysis {
         await progress(ProcessingUpdate(stage: .readingAudio, fraction: 0.05))
         let asset = AVURLAsset(url: url)
         let duration = try await asset.load(.duration).seconds
@@ -23,37 +22,12 @@ actor OnDeviceTennisProcessor: TennisProcessing {
 
         await progress(ProcessingUpdate(stage: .assemblingRallies, fraction: 0.74))
         let clips = planner.ranges(for: impacts, assetDuration: duration)
-        let destination = try Self.makeOutputURL()
+        await progress(ProcessingUpdate(stage: .assemblingRallies, fraction: 1))
 
-        await progress(ProcessingUpdate(stage: .exporting, fraction: 0.82))
-        do {
-            try await editor.export(asset: asset, clips: clips, to: destination)
-        } catch {
-            try? FileManager.default.removeItem(at: destination)
-            throw error
-        }
-        await progress(ProcessingUpdate(stage: .exporting, fraction: 1))
-
-        return TrainingSession(
-            outputURL: destination,
+        return VideoAnalysis(
+            duration: duration,
             impacts: impacts,
             clips: clips
         )
-    }
-
-    private static func makeOutputURL() throws -> URL {
-        let fileManager = FileManager.default
-        let folder = fileManager.temporaryDirectory
-            .appendingPathComponent("exports", isDirectory: true)
-        try fileManager.createDirectory(at: folder, withIntermediateDirectories: true)
-        if let staleExports = try? fileManager.contentsOfDirectory(
-            at: folder,
-            includingPropertiesForKeys: nil
-        ) {
-            for staleExport in staleExports where staleExport.pathExtension.lowercased() == "mp4" {
-                try? fileManager.removeItem(at: staleExport)
-            }
-        }
-        return folder.appendingPathComponent("treino-\(UUID().uuidString).mp4")
     }
 }

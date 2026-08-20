@@ -10,28 +10,73 @@ settings:
 packages:
   TennisClipsCore:
     path: core
+  Lottie:
+    url: https://github.com/airbnb/lottie-spm.git
+    from: 4.6.1
 targets:
   TennisClips:
     type: application
     platform: iOS
     sources:
       - path: app
+      - path: shared
     dependencies:
       - package: TennisClipsCore
+      - package: Lottie
+      - target: TennisClipsActivity
+        embed: true
+    info:
+      path: app/Info.plist
+      properties:
+        CFBundleDisplayName: Tennis Clips
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSPhotoLibraryUsageDescription: Selecione as gravações do seu jogo ou treino.
+        NSPhotoLibraryAddUsageDescription: Salve jogadas e compilações na sua biblioteca.
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSSupportsLiveActivities: true
+        BGTaskSchedulerPermittedIdentifiers:
+          - dev.mmonteiro.tennisclips.processing.*
+        UIBackgroundModes:
+          - processing
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.matheus3301.tennisclips
+        PRODUCT_BUNDLE_IDENTIFIER: dev.mmonteiro.tennisclips
         PRODUCT_NAME: TennisClips
-        MARKETING_VERSION: 0.1.0
+        MARKETING_VERSION: 0.2.0
         CURRENT_PROJECT_VERSION: 1
         TARGETED_DEVICE_FAMILY: "1"
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: Tennis Clips
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: Selecione uma gravação de treino para processar no próprio iPhone.
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Salve a compilação das jogadas na sua biblioteca.
-        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        CODE_SIGN_STYLE: Automatic
+  TennisClipsActivity:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: live-activity
+      - path: shared
+    dependencies:
+      - sdk: ActivityKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: WidgetKit.framework
+    info:
+      path: live-activity/Info.plist
+      properties:
+        CFBundleDisplayName: Tennis Clips
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.mmonteiro.tennisclips.activity
+        PRODUCT_NAME: TennisClipsActivity
+        MARKETING_VERSION: 0.2.0
+        CURRENT_PROJECT_VERSION: 1
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
         CODE_SIGN_STYLE: Automatic
   TennisClipsTests:
     type: bundle.unit-test
@@ -43,7 +88,7 @@ targets:
       - package: TennisClipsCore
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.matheus3301.tennisclips.tests
+        PRODUCT_BUNDLE_IDENTIFIER: dev.mmonteiro.tennisclips.tests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
   TennisClips:

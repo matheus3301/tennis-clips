@@ -49,12 +49,15 @@ flowchart LR
 O cliente nativo está em [`ios`](ios/README.md). Ele já
 contém:
 
-- importação por PhotosPicker;
+- biblioteca persistente de jogos e treinos;
+- importação multivídeo por PhotosPicker;
 - detector Butterworth/RMS on-device portado da implementação SciPy;
 - validação visual por movimento em três quadros;
 - planejamento das janelas contextuais;
-- montagem e exportação local;
-- reprodução e compartilhamento do resultado;
+- curadoria das jogadas por gesto, com salvamento individual;
+- montagem, exportação e histórico local;
+- progresso em background e superfícies do sistema compatíveis;
+- animação Lottie durante a análise;
 - pacote de domínio com testes independentes do Xcode.
 
 ```bash
