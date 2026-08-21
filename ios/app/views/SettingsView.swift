@@ -5,6 +5,7 @@ struct SettingsView: View {
 
     @AppStorage("appAppearance") private var appearanceRaw = AppAppearance.system.rawValue
     @AppStorage("exportQuality") private var exportQualityRaw = ExportQuality.high.rawValue
+    @AppStorage("titleStyle") private var titleStyleRaw = TitleStyle.standard.rawValue
 
     var body: some View {
         NavigationStack {
@@ -24,6 +25,17 @@ struct SettingsView: View {
                         }
                     }
                     Text(exportQualityDescription)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Apple Intelligence") {
+                    Picker("Estilo dos títulos", selection: $titleStyleRaw) {
+                        ForEach(TitleStyle.allCases) { style in
+                            Text(style.title).tag(style.rawValue)
+                        }
+                    }
+                    Text(titleStyleDescription)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -50,6 +62,10 @@ struct SettingsView: View {
         exportQualityRaw == ExportQuality.compact.rawValue
             ? "Usa H.264/AAC em qualidade média para ocupar menos espaço."
             : "Preserva a maior qualidade disponível em H.264/AAC."
+    }
+
+    private var titleStyleDescription: String {
+        (TitleStyle(rawValue: titleStyleRaw) ?? .standard).description
     }
 
 }

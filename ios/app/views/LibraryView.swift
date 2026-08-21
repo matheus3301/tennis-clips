@@ -136,7 +136,7 @@ struct LibraryView: View {
                 .padding(.bottom, 10)
 
                 if filteredSessions.isEmpty {
-                    ContentUnavailableView.search(text: searchText)
+                    ContentUnavailableView.search
                         .frame(maxWidth: .infinity)
                         .padding(.top, 50)
                 } else {
@@ -197,8 +197,7 @@ struct LibraryView: View {
             guard matchesFilter else { return false }
             let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !query.isEmpty else { return true }
-            return session.displayTitle.localizedStandardContains(query)
-                || session.opponent.localizedStandardContains(query)
+            return session.matchesSearch(query)
         }
     }
 

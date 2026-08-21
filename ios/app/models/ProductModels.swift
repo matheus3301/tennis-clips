@@ -41,13 +41,27 @@ nonisolated enum RallyDecision: String, Codable {
     case rejected
 }
 
+nonisolated enum SessionTitleOrigin: String, Codable {
+    case automatic
+    case manual
+    case legacy
+}
+
 @Model
 final class TennisSession {
     @Attribute(.unique) var id: UUID
     var kindRaw: String
     var title: String
+    var titleOriginRaw: String = SessionTitleOrigin.legacy.rawValue
+    var automaticTitleStateRaw: String = AutomaticTitleState.legacy.rawValue
     var opponent: String
     var playedAt: Date
+    var playedAtIsManual: Bool = true
+    var locationName: String?
+    var locality: String?
+    var latitude: Double?
+    var longitude: Double?
+    var metadataVersion: Int = 0
     var createdAt: Date
     var updatedAt: Date
     var statusRaw: String
@@ -68,13 +82,32 @@ final class TennisSession {
         title: String,
         opponent: String = "",
         playedAt: Date,
+        playedAtIsManual: Bool = true,
+        titleOrigin: SessionTitleOrigin = .legacy,
+        automaticTitleState: AutomaticTitleState? = nil,
         status: SessionStatus = .analyzing
     ) {
         self.id = id
         self.kindRaw = kind.rawValue
         self.title = title
+        self.titleOriginRaw = titleOrigin.rawValue
+        if let automaticTitleState {
+            self.automaticTitleStateRaw = automaticTitleState.rawValue
+        } else {
+            self.automaticTitleStateRaw = switch titleOrigin {
+            case .automatic: AutomaticTitleState.pending.rawValue
+            case .manual: AutomaticTitleState.notApplicable.rawValue
+            case .legacy: AutomaticTitleState.legacy.rawValue
+            }
+        }
         self.opponent = opponent
         self.playedAt = playedAt
+        self.playedAtIsManual = playedAtIsManual
+        self.locationName = nil
+        self.locality = nil
+        self.latitude = nil
+        self.longitude = nil
+        self.metadataVersion = 0
         self.createdAt = .now
         self.updatedAt = .now
         self.statusRaw = status.rawValue
@@ -99,8 +132,29 @@ final class TennisSession {
         }
     }
 
+    var titleOrigin: SessionTitleOrigin {
+        get { SessionTitleOrigin(rawValue: titleOriginRaw) ?? .legacy }
+        set { titleOriginRaw = newValue.rawValue }
+    }
+
+    var automaticTitleState: AutomaticTitleState {
+        get { AutomaticTitleState(rawValue: automaticTitleStateRaw) ?? .legacy }
+        set { automaticTitleStateRaw = newValue.rawValue }
+    }
+
     var displayTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if titleOrigin == .automatic {
+            switch automaticTitleState {
+            case .legacy, .pending, .generating:
+                return "Gerando título…"
+            case .unsupportedOS, .deviceNotEligible, .appleIntelligenceNotEnabled,
+                 .modelNotReady, .unsupportedLanguage, .failed:
+                return "Título não gerado"
+            case .generated, .notApplicable:
+                break
+            }
+        }
         return trimmed.isEmpty ? kind.title : trimmed
     }
 
@@ -127,6 +181,16 @@ final class TennisSession {
     var compiledDuration: TimeInterval {
         keptClips.reduce(0) { $0 + $1.duration }
     }
+
+    var recordedDuration: TimeInterval {
+        videos.reduce(0) { $0 + $1.duration }
+    }
+
+    var displayLocation: String? {
+        if let locationName, !locationName.isEmpty { return locationName }
+        if let locality, !locality.isEmpty { return locality }
+        return nil
+    }
 }
 
 @Model
@@ -136,19 +200,28 @@ final class SessionVideo {
     var originalName: String
     var relativePath: String
     var duration: TimeInterval
+    var capturedAt: Date?
+    var latitude: Double?
+    var longitude: Double?
 
     init(
         id: UUID = UUID(),
         order: Int,
         originalName: String,
         relativePath: String,
-        duration: TimeInterval = 0
+        duration: TimeInterval = 0,
+        capturedAt: Date? = nil,
+        latitude: Double? = nil,
+        longitude: Double? = nil
     ) {
         self.id = id
         self.order = order
         self.originalName = originalName
         self.relativePath = relativePath
         self.duration = duration
+        self.capturedAt = capturedAt
+        self.latitude = latitude
+        self.longitude = longitude
     }
 }
 

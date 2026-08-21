@@ -16,9 +16,7 @@ struct NewSessionView: View {
     let onCreated: (UUID) -> Void
 
     @State private var kind: SessionKind = .match
-    @State private var title = ""
     @State private var opponent = ""
-    @State private var playedAt = Date()
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var isImporting = false
     @State private var importIssue: ImportIssue?
@@ -31,7 +29,9 @@ struct NewSessionView: View {
                     VStack(alignment: .leading, spacing: 26) {
                         intro
                         kindPicker
-                        details
+                        if kind == .match {
+                            details
+                        }
                         recordings
                     }
                     .padding(20)
@@ -90,27 +90,12 @@ struct NewSessionView: View {
             Text("Detalhes")
                 .font(.headline)
 
-            DatePicker("Data", selection: $playedAt, displayedComponents: .date)
-
-            Divider()
-
             VStack(alignment: .leading, spacing: 6) {
-                Text("Nome")
+                Text("Adversário · opcional")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(AppPalette.ink.opacity(0.55))
-                TextField(defaultTitle, text: $title)
-                    .textInputAutocapitalization(.sentences)
-            }
-
-            if kind == .match {
-                Divider()
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Adversário · opcional")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(AppPalette.ink.opacity(0.55))
-                    TextField("Com quem você jogou?", text: $opponent)
-                        .textInputAutocapitalization(.words)
-                }
+                TextField("Com quem você jogou?", text: $opponent)
+                    .textInputAutocapitalization(.words)
             }
         }
         .padding(18)
@@ -204,10 +189,6 @@ struct NewSessionView: View {
         }
     }
 
-    private var defaultTitle: String {
-        kind == .match ? "Jogo de quinta" : "Treino de saque"
-    }
-
     private func importAndCreate() {
         isImporting = true
         importIssue = nil
@@ -220,18 +201,17 @@ struct NewSessionView: View {
                         failedImportCount += 1
                         continue
                     }
-                    movies.append(movie)
+                    movies.append(movie.attachingAssetIdentifier(item.itemIdentifier))
                 }
                 guard !movies.isEmpty else {
                     throw ProcessingError.cannotReadMedia
                 }
-                try await model.validateImports(movies)
+                let metadata = try await model.validateImports(movies)
                 let session = try model.createSession(
                     kind: kind,
-                    title: title.trimmingCharacters(in: .whitespacesAndNewlines),
                     opponent: opponent.trimmingCharacters(in: .whitespacesAndNewlines),
-                    playedAt: playedAt,
                     movies: movies,
+                    metadata: metadata,
                     context: modelContext
                 )
                 if failedImportCount > 0 {

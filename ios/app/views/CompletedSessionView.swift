@@ -1,75 +1,93 @@
-import AVKit
 import SwiftData
 import SwiftUI
 
 struct CompletedSessionView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.modelContext) private var modelContext
+    @State private var isPresentingFullScreen = false
     let session: TennisSession
 
     var body: some View {
-        ScrollView {
+        GeometryReader { proxy in
             if let outputURL = model.outputURL(for: session) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("VÍDEO PRONTO").font(.caption.weight(.black)).tracking(1.7).foregroundStyle(AppPalette.clayMark)
-                    Text("As jogadas que você escolheu.").displayType(size: 32).foregroundStyle(AppPalette.ink)
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("VÍDEO PRONTO")
+                        .font(.caption.weight(.black))
+                        .tracking(1.7)
+                        .foregroundStyle(AppPalette.clayMark)
+                    Text("As jogadas que você escolheu.")
+                        .displayType(size: 32)
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.84)
+                    SessionMetadataSummary(session: session, compact: true)
                     FinalVideoPlayer(url: outputURL)
-                        .frame(height: 360)
-                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    HStack(spacing: 10) {
+                        .frame(height: playerHeight(for: proxy.size.height))
+                        .clipShape(.rect(cornerRadius: 22))
+                        .overlay(alignment: .topTrailing) {
+                            Button(
+                                "Ver em tela cheia",
+                                systemImage: "arrow.up.left.and.arrow.down.right",
+                                action: presentFullScreen
+                            )
+                            .buttonStyle(.plain)
+                            .labelStyle(.iconOnly)
+                            .font(.title3.bold())
+                            .foregroundStyle(.black)
+                            .frame(width: 44, height: 44)
+                            .background(.white.opacity(0.9), in: .circle)
+                            .overlay {
+                                Circle()
+                                    .stroke(.black.opacity(0.12), lineWidth: 1)
+                            }
+                            .padding(10)
+                        }
+                    HStack(spacing: 9) {
                         SummaryMetric(value: String(session.keptClips.count), label: "jogadas")
                         SummaryMetric(value: session.compiledDuration.shortDuration, label: "duração")
                     }
-                    HStack(spacing: 10) {
-                        Button { Task { await model.saveCompilation(session) } } label: { Label("Salvar", systemImage: "square.and.arrow.down") }
-                            .buttonStyle(PrimaryActionButtonStyle())
-                        ShareLink(item: outputURL) { Label("Compartilhar", systemImage: "square.and.arrow.up") }
-                            .buttonStyle(QuietActionButtonStyle())
-                    }
-                    NavigationLink(value: AppRoute.montage(session.id)) { Label("Rever jogadas e cortes", systemImage: "rectangle.grid.2x2") }
-                        .buttonStyle(QuietActionButtonStyle())
-                    Button { model.compile(session, context: modelContext) } label: { Label("Montar novamente", systemImage: "arrow.clockwise") }
+                    HStack(spacing: 9) {
+                        Button {
+                            Task { await model.saveCompilation(session) }
+                        } label: {
+                            Label("Salvar", systemImage: "square.and.arrow.down")
+                        }
                         .buttonStyle(PrimaryActionButtonStyle())
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-            }
-        }
-    }
-}
-
-private struct FinalVideoPlayer: View {
-    let url: URL
-    @State private var player: AVPlayer
-    @State private var isPlaying = false
-
-    init(url: URL) {
-        self.url = url
-        _player = State(initialValue: AVPlayer(url: url))
-    }
-
-    var body: some View {
-        ZStack {
-            if isPlaying { AspectFillPlayerView(player: player).transition(.opacity) } else { VideoThumbnailView(url: url) }
-            Button {
-                isPlaying.toggle()
-                isPlaying ? player.play() : player.pause()
-            } label: {
-                ZStack {
-                    Color.clear
-                    if !isPlaying {
-                        Circle().fill(.ultraThinMaterial).frame(width: 72, height: 72)
-                        Image(systemName: "play.fill").font(.title2.weight(.bold)).foregroundStyle(AppPalette.chalk)
+                        ShareLink(item: outputURL) {
+                            Label("Compartilhar", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(QuietActionButtonStyle())
+                    }
+                    HStack(spacing: 9) {
+                        NavigationLink(value: AppRoute.montage(session.id)) {
+                            Label("Rever cortes", systemImage: "rectangle.grid.2x2")
+                        }
+                        .buttonStyle(QuietActionButtonStyle())
+                        Button {
+                            model.compile(session, context: modelContext)
+                        } label: {
+                            Label("Remontar", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(PrimaryActionButtonStyle())
                     }
                 }
-                .contentShape(Rectangle())
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .fullScreenCover(isPresented: $isPresentingFullScreen) {
+                    FullScreenVideoPlayer(url: outputURL)
+                }
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isPlaying ? "Pausar vídeo" : "Reproduzir vídeo")
         }
-        .background(AppPalette.hardCourt)
-        .animation(.easeOut(duration: 0.2), value: isPlaying)
-        .onDisappear { player.pause(); isPlaying = false }
+    }
+
+    private func playerHeight(for availableHeight: CGFloat) -> CGFloat {
+        let titleStatusAllowance: CGFloat = session.titleOrigin == .automatic
+            && session.automaticTitleState != .generated ? 72 : 0
+        return min(max(availableHeight * 0.35 - titleStatusAllowance, 128), 260)
+    }
+
+    private func presentFullScreen() {
+        isPresentingFullScreen = true
     }
 }
 
@@ -84,6 +102,7 @@ struct FailureSessionView: View {
             Image(systemName: "waveform.badge.exclamationmark").font(.system(size: 54, weight: .bold)).foregroundStyle(AppPalette.clayMark)
             Text("Não conseguimos separar as jogadas.").displayType(size: 33).multilineTextAlignment(.center).foregroundStyle(AppPalette.ink)
             Text(session.errorMessage ?? "Confira as gravações e tente novamente.").multilineTextAlignment(.center).foregroundStyle(AppPalette.ink.opacity(0.6))
+            SessionMetadataSummary(session: session)
             Button(action: retry) {
                 Label("Tentar novamente", systemImage: "arrow.clockwise")
             }
@@ -99,19 +118,5 @@ struct FailureSessionView: View {
         } else {
             model.startAnalysis(session, context: modelContext)
         }
-    }
-}
-
-extension TimeInterval {
-    var shortDuration: String {
-        let total = Int(max(self, 0).rounded())
-        let seconds = String(total % 60).leftPadded(to: 2, with: "0")
-        return "\(total / 60):\(seconds)"
-    }
-}
-
-private extension String {
-    func leftPadded(to length: Int, with character: Character) -> String {
-        String(repeating: character, count: max(0, length - count)) + self
     }
 }

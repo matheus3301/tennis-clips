@@ -96,6 +96,154 @@ final class AppSmokeTests: XCTestCase {
         XCTAssertEqual(movie.originalName, "Quadra 1.MOV")
     }
 
+    func testISO6709LocationMetadataIsParsed() throws {
+        let coordinate = try XCTUnwrap(
+            MediaMetadataService.parseISO6709("-03.731900-038.526700+004.000/")
+        )
+
+        XCTAssertEqual(coordinate.latitude, -3.7319, accuracy: 0.000_001)
+        XCTAssertEqual(coordinate.longitude, -38.5267, accuracy: 0.000_001)
+    }
+
+    @MainActor
+    func testSessionAggregatesRecordedDurationAndLocation() {
+        let session = TennisSession(kind: .practice, title: "Treino", playedAt: .now)
+        session.locationName = "BNB Clube"
+        session.videos = [
+            SessionVideo(
+                order: 0,
+                originalName: "1.mov",
+                relativePath: "sources/1.mov",
+                duration: 120
+            ),
+            SessionVideo(
+                order: 1,
+                originalName: "2.mov",
+                relativePath: "sources/2.mov",
+                duration: 180
+            ),
+        ]
+
+        XCTAssertEqual(session.recordedDuration, 300)
+        XCTAssertEqual(session.displayLocation, "BNB Clube")
+    }
+
+    @MainActor
+    func testAutomaticTitleStartsWithAnExplicitTemporaryState() {
+        let session = TennisSession(
+            kind: .practice,
+            title: "",
+            playedAt: .now,
+            titleOrigin: .automatic
+        )
+
+        XCTAssertEqual(session.automaticTitleState, .pending)
+        XCTAssertEqual(session.displayTitle, "Gerando título…")
+    }
+
+    func testDurationHasAccessibleSpokenFormat() {
+        XCTAssertEqual(TimeInterval(1).spokenDuration, "1 segundo")
+        XCTAssertEqual(TimeInterval(60).spokenDuration, "1 minuto")
+        XCTAssertEqual(TimeInterval(125).spokenDuration, "2 minutos e 5 segundos")
+    }
+
+    @MainActor
+    func testManualSessionEditProtectsTitleFromAutomaticUpdates() throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let session = TennisSession(
+            kind: .practice,
+            title: "Treino à noite",
+            playedAt: .now,
+            titleOrigin: .automatic
+        )
+        container.mainContext.insert(session)
+        let model = AppModel(analyzer: StubAnalyzer())
+
+        XCTAssertTrue(model.updateSession(
+            session,
+            kind: .practice,
+            title: "Meu treino",
+            opponent: "",
+            playedAt: session.playedAt,
+            context: container.mainContext
+        ))
+        XCTAssertEqual(session.titleOrigin, .manual)
+        XCTAssertEqual(session.automaticTitleState, .notApplicable)
+        XCTAssertTrue(session.playedAtIsManual)
+    }
+
+    @MainActor
+    func testRemovingRecordingRecomputesAutomaticMetadata() async throws {
+        let container = try ModelContainer(
+            for: TennisSession.self,
+            SessionVideo.self,
+            RallyClip.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = container.mainContext
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let storage = SessionStorage(rootURL: root)
+        let earlier = Date(timeIntervalSince1970: 1_700_000_000)
+        let later = earlier.addingTimeInterval(3_600)
+        let session = TennisSession(
+            kind: .practice,
+            title: "Treino",
+            playedAt: earlier,
+            playedAtIsManual: false,
+            titleOrigin: .manual
+        )
+        session.locationName = "Local antigo"
+        session.latitude = -3.75
+        session.longitude = -38.55
+        let remaining = SessionVideo(
+            order: 0,
+            originalName: "1.mov",
+            relativePath: "sources/source-001.mov",
+            duration: 120,
+            capturedAt: later,
+            latitude: -3.73,
+            longitude: -38.52
+        )
+        let removed = SessionVideo(
+            order: 1,
+            originalName: "2.mov",
+            relativePath: "sources/source-002.mov",
+            duration: 120,
+            capturedAt: earlier,
+            latitude: -3.77,
+            longitude: -38.58
+        )
+        session.videos = [remaining, removed]
+        context.insert(session)
+        try storage.prepareSession(session.id)
+        try Data([0]).write(to: storage.url(for: session.id, relativePath: remaining.relativePath))
+        try Data([1]).write(to: storage.url(for: session.id, relativePath: removed.relativePath))
+        defer { try? FileManager.default.removeItem(at: root) }
+        let model = AppModel(
+            analyzer: StubAnalyzer(),
+            storage: storage,
+            locationResolver: StubLocationResolver()
+        )
+
+        try model.removeRecording(removed, from: session, context: context)
+
+        let deadline = ContinuousClock.now + .seconds(2)
+        while session.metadataVersion == 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+
+        XCTAssertEqual(session.playedAt, later)
+        XCTAssertEqual(try XCTUnwrap(session.latitude), -3.73, accuracy: 0.000_001)
+        XCTAssertEqual(try XCTUnwrap(session.longitude), -38.52, accuracy: 0.000_001)
+        XCTAssertEqual(session.displayLocation, "Local recalculado")
+    }
+
     func testPhotoLibraryExporterCanBeCreatedOutsideMainActor() {
         _ = PhotoLibraryExporter()
     }
@@ -548,5 +696,12 @@ nonisolated private struct PartialSuccessAnalyzer: TennisAnalyzing {
             impacts: [impact],
             clips: [ClipRange(start: 1, end: 6)]
         )
+    }
+}
+
+@MainActor
+private struct StubLocationResolver: SessionLocationResolving {
+    func resolve(latitude: Double, longitude: Double) async -> ResolvedSessionLocation? {
+        ResolvedSessionLocation(name: "Local recalculado", locality: "Fortaleza")
     }
 }

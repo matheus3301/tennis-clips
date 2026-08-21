@@ -76,6 +76,8 @@ private struct ReviewReadyView: View {
                         .lineSpacing(3)
                 }
 
+                SessionMetadataSummary(session: session)
+
                 if let message = session.errorMessage {
                     PartialAnalysisNotice(message: message)
                 }
@@ -115,6 +117,8 @@ private struct ReviewSummaryView: View {
                 Text(summaryTitle)
                     .displayType(size: 42)
                     .foregroundStyle(AppPalette.ink)
+
+                SessionMetadataSummary(session: session)
 
                 if let message = session.errorMessage {
                     PartialAnalysisNotice(message: message)
