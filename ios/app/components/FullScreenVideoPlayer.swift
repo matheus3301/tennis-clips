@@ -10,20 +10,29 @@ struct FullScreenVideoPlayer: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack {
             Color.black
                 .ignoresSafeArea()
 
             VideoPlayer(player: player)
-                .ignoresSafeArea()
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    HStack {
+                        Button(
+                            "Fechar",
+                            systemImage: "xmark",
+                            action: dismiss.callAsFunction
+                        )
+                        .font(.body.bold())
+                        .foregroundStyle(.white)
+                        .frame(minHeight: 44)
 
-            Button("Fechar tela cheia", systemImage: "xmark", action: dismiss.callAsFunction)
-                .labelStyle(.iconOnly)
-                .font(.body.bold())
-                .foregroundStyle(.white)
-                .frame(width: 44, height: 44)
-                .background(.ultraThinMaterial, in: .circle)
-                .padding()
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .frame(height: 52)
+                    .background(.black)
+                }
+                .ignoresSafeArea(edges: .bottom)
         }
         .background(.black)
         .onAppear {
