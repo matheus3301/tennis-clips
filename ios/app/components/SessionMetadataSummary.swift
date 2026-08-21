@@ -2,9 +2,10 @@ import SwiftUI
 
 struct SessionMetadataSummary: View {
     let session: TennisSession
+    var compact = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: compact ? 8 : 12) {
             Text("SOBRE A SESSÃO")
                 .font(.caption.bold())
                 .tracking(1.4)
@@ -30,7 +31,7 @@ struct SessionMetadataSummary: View {
         .font(.subheadline)
         .foregroundStyle(AppPalette.ink)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(compact ? 12 : 16)
         .background(AppPalette.courtMist.opacity(0.58), in: .rect(cornerRadius: 18))
     }
 }

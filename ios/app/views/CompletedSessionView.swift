@@ -8,34 +8,61 @@ struct CompletedSessionView: View {
     let session: TennisSession
 
     var body: some View {
-        ScrollView {
+        GeometryReader { proxy in
             if let outputURL = model.outputURL(for: session) {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("VÍDEO PRONTO").font(.caption.weight(.black)).tracking(1.7).foregroundStyle(AppPalette.clayMark)
-                    Text("As jogadas que você escolheu.").displayType(size: 32).foregroundStyle(AppPalette.ink)
-                    SessionMetadataSummary(session: session)
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("VÍDEO PRONTO")
+                        .font(.caption.weight(.black))
+                        .tracking(1.7)
+                        .foregroundStyle(AppPalette.clayMark)
+                    Text("As jogadas que você escolheu.")
+                        .displayType(size: 32)
+                        .foregroundStyle(AppPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.84)
+                    SessionMetadataSummary(session: session, compact: true)
                     FinalVideoPlayer(url: outputURL)
-                        .frame(height: 360)
-                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                    HStack(spacing: 10) {
+                        .frame(height: playerHeight(for: proxy.size.height))
+                        .clipShape(.rect(cornerRadius: 22))
+                    HStack(spacing: 9) {
                         SummaryMetric(value: String(session.keptClips.count), label: "jogadas")
                         SummaryMetric(value: session.compiledDuration.shortDuration, label: "duração")
                     }
-                    HStack(spacing: 10) {
-                        Button { Task { await model.saveCompilation(session) } } label: { Label("Salvar", systemImage: "square.and.arrow.down") }
-                            .buttonStyle(PrimaryActionButtonStyle())
-                        ShareLink(item: outputURL) { Label("Compartilhar", systemImage: "square.and.arrow.up") }
-                            .buttonStyle(QuietActionButtonStyle())
-                    }
-                    NavigationLink(value: AppRoute.montage(session.id)) { Label("Rever jogadas e cortes", systemImage: "rectangle.grid.2x2") }
-                        .buttonStyle(QuietActionButtonStyle())
-                    Button { model.compile(session, context: modelContext) } label: { Label("Montar novamente", systemImage: "arrow.clockwise") }
+                    HStack(spacing: 9) {
+                        Button {
+                            Task { await model.saveCompilation(session) }
+                        } label: {
+                            Label("Salvar", systemImage: "square.and.arrow.down")
+                        }
                         .buttonStyle(PrimaryActionButtonStyle())
+                        ShareLink(item: outputURL) {
+                            Label("Compartilhar", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(QuietActionButtonStyle())
+                    }
+                    HStack(spacing: 9) {
+                        NavigationLink(value: AppRoute.montage(session.id)) {
+                            Label("Rever cortes", systemImage: "rectangle.grid.2x2")
+                        }
+                        .buttonStyle(QuietActionButtonStyle())
+                        Button {
+                            model.compile(session, context: modelContext)
+                        } label: {
+                            Label("Remontar", systemImage: "arrow.clockwise")
+                        }
+                        .buttonStyle(PrimaryActionButtonStyle())
+                    }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
             }
         }
+    }
+
+    private func playerHeight(for availableHeight: CGFloat) -> CGFloat {
+        let titleStatusAllowance: CGFloat = session.titleOrigin == .automatic
+            && session.automaticTitleState != .generated ? 72 : 0
+        return min(max(availableHeight * 0.35 - titleStatusAllowance, 128), 260)
     }
 }
 
