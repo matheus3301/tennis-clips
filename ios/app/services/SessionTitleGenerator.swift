@@ -1,5 +1,6 @@
 import CoreGraphics
 import Foundation
+import OSLog
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -7,6 +8,11 @@ import FoundationModels
 
 @MainActor
 struct SessionTitleGenerator: SessionTitleGenerating {
+    nonisolated private static let logger = Logger(
+        subsystem: "dev.mmonteiro.tennisclips",
+        category: "AutomaticTitle"
+    )
+
     var supportsVisualContext: Bool {
         #if compiler(>=6.4)
         if #available(iOS 27.0, *) { return true }
@@ -14,22 +20,12 @@ struct SessionTitleGenerator: SessionTitleGenerating {
         return false
     }
 
-    func fallback(for facts: SessionTitleFacts, style: TitleStyle) -> String {
-        let subject = facts.kind.title
-        if let location = facts.location, !location.isEmpty {
-            return style == .creative
-                ? subject + " " + facts.periodOfDay + " no " + location
-                : subject + " no " + location
-        }
-        return subject + " " + facts.periodOfDay
-    }
-
     func generate(
         for facts: SessionTitleFacts,
         style: TitleStyle,
         visualFrames: [CGImage] = []
-    ) async -> String? {
-        guard !Task.isCancelled else { return nil }
+    ) async -> SessionTitleGenerationOutcome {
+        guard !Task.isCancelled else { return .failed }
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             return await generateWithFoundationModels(
@@ -39,7 +35,7 @@ struct SessionTitleGenerator: SessionTitleGenerating {
             )
         }
         #endif
-        return nil
+        return .unavailable(.unsupportedOS)
     }
 
     #if canImport(FoundationModels)
@@ -48,10 +44,29 @@ struct SessionTitleGenerator: SessionTitleGenerating {
         for facts: SessionTitleFacts,
         style: TitleStyle,
         visualFrames: [CGImage]
-    ) async -> String? {
+    ) async -> SessionTitleGenerationOutcome {
         let model = SystemLanguageModel.default
-        let locale = Locale(identifier: "pt_BR")
-        guard model.availability == .available, model.supportsLocale(locale) else { return nil }
+        switch model.availability {
+        case .available:
+            break
+        case .unavailable(let reason):
+            let state: AutomaticTitleState = switch reason {
+            case .deviceNotEligible: .deviceNotEligible
+            case .appleIntelligenceNotEnabled: .appleIntelligenceNotEnabled
+            case .modelNotReady: .modelNotReady
+            @unknown default: .failed
+            }
+            Self.logger.notice("Foundation Models unavailable: \(state.rawValue, privacy: .public)")
+            return .unavailable(state)
+        }
+
+        let locale = Locale.current
+        guard model.supportsLocale(locale) else {
+            Self.logger.notice(
+                "Foundation Models does not support app locale: \(locale.identifier, privacy: .public)"
+            )
+            return .unavailable(.unsupportedLanguage)
+        }
 
         let styleInstruction = style == .creative
             ? "Seja expressivo e variado, mas continue factual."
@@ -114,9 +129,19 @@ struct SessionTitleGenerator: SessionTitleGenerating {
                 options: options
             )
             #endif
-            return Self.validated(response.content.title)
+            guard let title = Self.validated(response.content.title) else {
+                Self.logger.error("Foundation Models returned a title outside the validation contract")
+                return .failed
+            }
+            Self.logger.notice("Foundation Models generated an automatic session title")
+            return .generated(title)
+        } catch is CancellationError {
+            return .failed
         } catch {
-            return nil
+            Self.logger.error(
+                "Foundation Models title generation failed: \(error.localizedDescription, privacy: .public)"
+            )
+            return .failed
         }
     }
     #endif

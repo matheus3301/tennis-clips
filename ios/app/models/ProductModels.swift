@@ -53,6 +53,7 @@ final class TennisSession {
     var kindRaw: String
     var title: String
     var titleOriginRaw: String = SessionTitleOrigin.legacy.rawValue
+    var automaticTitleStateRaw: String = AutomaticTitleState.legacy.rawValue
     var opponent: String
     var playedAt: Date
     var playedAtIsManual: Bool = true
@@ -83,12 +84,22 @@ final class TennisSession {
         playedAt: Date,
         playedAtIsManual: Bool = true,
         titleOrigin: SessionTitleOrigin = .legacy,
+        automaticTitleState: AutomaticTitleState? = nil,
         status: SessionStatus = .analyzing
     ) {
         self.id = id
         self.kindRaw = kind.rawValue
         self.title = title
         self.titleOriginRaw = titleOrigin.rawValue
+        if let automaticTitleState {
+            self.automaticTitleStateRaw = automaticTitleState.rawValue
+        } else {
+            self.automaticTitleStateRaw = switch titleOrigin {
+            case .automatic: AutomaticTitleState.pending.rawValue
+            case .manual: AutomaticTitleState.notApplicable.rawValue
+            case .legacy: AutomaticTitleState.legacy.rawValue
+            }
+        }
         self.opponent = opponent
         self.playedAt = playedAt
         self.playedAtIsManual = playedAtIsManual
@@ -126,8 +137,24 @@ final class TennisSession {
         set { titleOriginRaw = newValue.rawValue }
     }
 
+    var automaticTitleState: AutomaticTitleState {
+        get { AutomaticTitleState(rawValue: automaticTitleStateRaw) ?? .legacy }
+        set { automaticTitleStateRaw = newValue.rawValue }
+    }
+
     var displayTitle: String {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if titleOrigin == .automatic {
+            switch automaticTitleState {
+            case .legacy, .pending, .generating:
+                return "Gerando título…"
+            case .unsupportedOS, .deviceNotEligible, .appleIntelligenceNotEnabled,
+                 .modelNotReady, .unsupportedLanguage, .failed:
+                return "Título não gerado"
+            case .generated, .notApplicable:
+                break
+            }
+        }
         return trimmed.isEmpty ? kind.title : trimmed
     }
 

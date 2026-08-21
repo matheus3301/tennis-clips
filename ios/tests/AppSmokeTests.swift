@@ -129,22 +129,16 @@ final class AppSmokeTests: XCTestCase {
     }
 
     @MainActor
-    func testFallbackTitleRespectsSelectedStyle() {
-        let facts = SessionTitleFacts(
+    func testAutomaticTitleStartsWithAnExplicitTemporaryState() {
+        let session = TennisSession(
             kind: .practice,
-            playedAt: Date(timeIntervalSince1970: 1_700_000_000),
-            recordedDuration: 3_600,
-            opponent: "",
-            location: "BNB Clube",
-            recordingCount: 2,
-            rallyCount: 8
+            title: "",
+            playedAt: .now,
+            titleOrigin: .automatic
         )
-        let generator = SessionTitleGenerator()
 
-        XCTAssertEqual(generator.fallback(for: facts, style: .standard), "Treino no BNB Clube")
-        XCTAssertTrue(
-            generator.fallback(for: facts, style: .creative).contains("BNB Clube")
-        )
+        XCTAssertEqual(session.automaticTitleState, .pending)
+        XCTAssertEqual(session.displayTitle, "Gerando título…")
     }
 
     func testDurationHasAccessibleSpokenFormat() {
@@ -179,6 +173,7 @@ final class AppSmokeTests: XCTestCase {
             context: container.mainContext
         ))
         XCTAssertEqual(session.titleOrigin, .manual)
+        XCTAssertEqual(session.automaticTitleState, .notApplicable)
         XCTAssertTrue(session.playedAtIsManual)
     }
 

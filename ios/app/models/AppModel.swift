@@ -82,22 +82,14 @@ final class AppModel {
         context: ModelContext
     ) throws -> TennisSession {
         let playedAt = metadata.compactMap(\.capturedAt).min() ?? .now
-        let facts = SessionTitleFacts(
-            kind: kind,
-            playedAt: playedAt,
-            recordedDuration: metadata.reduce(0) { $0 + $1.duration },
-            opponent: opponent,
-            location: nil,
-            recordingCount: movies.count,
-            rallyCount: 0
-        )
         let session = TennisSession(
             kind: kind,
-            title: titleGenerator.fallback(for: facts, style: TitleStyle.current),
+            title: "",
             opponent: opponent.trimmingCharacters(in: .whitespacesAndNewlines),
             playedAt: playedAt,
             playedAtIsManual: false,
-            titleOrigin: .automatic
+            titleOrigin: .automatic,
+            automaticTitleState: .pending
         )
         return try persistSession(
             session,
@@ -288,7 +280,8 @@ final class AppModel {
     func resumeIfNeeded(_ sessions: [TennisSession], context: ModelContext) {
         for session in sessions where activeTasks[session.id] == nil {
             if session.metadataVersion < 1
-                || (session.latitude != nil && session.displayLocation == nil) {
+                || (session.latitude != nil && session.displayLocation == nil)
+                || shouldResumeAutomaticTitle(for: session) {
                 startEnrichment(session, context: context)
             }
             switch session.status {
@@ -511,11 +504,20 @@ final class AppModel {
         session.kind = kind
         session.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         session.titleOrigin = .manual
+        session.automaticTitleState = .notApplicable
         session.opponent = opponent.trimmingCharacters(in: .whitespacesAndNewlines)
         session.playedAt = playedAt
         session.playedAtIsManual = true
         session.updatedAt = .now
         return save(context, failureMessage: "Não foi possível atualizar a sessão.")
+    }
+
+    func retryAutomaticTitle(for session: TennisSession, context: ModelContext) {
+        guard session.titleOrigin == .automatic,
+              session.automaticTitleState.canRetry else {
+            return
+        }
+        startEnrichment(session, context: context, force: true)
     }
 
     func cancelProcessing(_ session: TennisSession, context: ModelContext) {
@@ -775,6 +777,10 @@ final class AppModel {
             enrichmentTasks[session.id] = nil
             enrichmentRequestIDs[session.id] = nil
             session.metadataVersion = 0
+            if session.titleOrigin == .automatic {
+                session.title = ""
+                session.automaticTitleState = .pending
+            }
         } else {
             guard enrichmentTasks[session.id] == nil else { return }
         }
@@ -794,9 +800,17 @@ final class AppModel {
     ) async {
         guard isActiveEnrichment(for: session.id, requestID: requestID) else { return }
         if session.titleOrigin == .legacy {
-            session.titleOrigin = session.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? .automatic
-                : .manual
+            if session.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                session.titleOrigin = .automatic
+                session.automaticTitleState = .pending
+            } else {
+                session.titleOrigin = .manual
+                session.automaticTitleState = .notApplicable
+            }
+        } else if session.titleOrigin == .automatic,
+                  session.automaticTitleState == .legacy {
+            session.title = ""
+            session.automaticTitleState = .pending
         }
 
         for video in session.sortedVideos
@@ -862,9 +876,14 @@ final class AppModel {
 
     private func refreshAutomaticTitle(for session: TennisSession, context: ModelContext) async {
         guard session.titleOrigin == .automatic, !Task.isCancelled else { return }
+        session.title = ""
+        session.automaticTitleState = .generating
+        guard save(context, failureMessage: "Não foi possível iniciar a geração do título.") else {
+            session.automaticTitleState = .failed
+            return
+        }
         let style = TitleStyle.current
         let facts = titleFacts(for: session)
-        let fallback = titleGenerator.fallback(for: facts, style: style)
         let visualFrames: [CGImage]
         if style == .creative, titleGenerator.supportsVisualContext {
             visualFrames = await visualContextProvider.frames(for: visualFrameRequests(for: session))
@@ -872,15 +891,36 @@ final class AppModel {
             visualFrames = []
         }
         guard !Task.isCancelled else { return }
-        let generated = await titleGenerator.generate(
+        let outcome = await titleGenerator.generate(
             for: facts,
             style: style,
             visualFrames: visualFrames
         )
         guard session.titleOrigin == .automatic, !Task.isCancelled else { return }
-        session.title = generated ?? fallback
+        switch outcome {
+        case .generated(let title):
+            session.title = title
+            session.automaticTitleState = .generated
+        case .unavailable(let state):
+            session.title = ""
+            session.automaticTitleState = state
+        case .failed:
+            session.title = ""
+            session.automaticTitleState = .failed
+        }
         session.updatedAt = .now
         save(context, failureMessage: "Não foi possível salvar o título automático.")
+    }
+
+    private func shouldResumeAutomaticTitle(for session: TennisSession) -> Bool {
+        guard session.titleOrigin == .automatic else { return false }
+        return switch session.automaticTitleState {
+        case .legacy, .pending, .generating, .modelNotReady:
+            true
+        case .notApplicable, .generated, .unsupportedOS, .deviceNotEligible,
+             .appleIntelligenceNotEnabled, .unsupportedLanguage, .failed:
+            false
+        }
     }
 
     private func titleFacts(for session: TennisSession) -> SessionTitleFacts {

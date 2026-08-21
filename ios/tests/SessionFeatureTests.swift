@@ -42,19 +42,23 @@ final class SessionFeatureTests: XCTestCase {
     }
 
     @MainActor
-    func testFallbackTitlesCoverStylesWithAndWithoutLocation() throws {
-        let generator = SessionTitleGenerator()
-        let morning = try facts(atHour: 8, location: nil)
-
-        XCTAssertEqual(generator.fallback(for: morning, style: .standard), "Treino pela manhã")
-        XCTAssertEqual(generator.fallback(for: morning, style: .creative), "Treino pela manhã")
-
-        let atClub = try facts(atHour: 8, location: "Clube do Lago")
-        XCTAssertEqual(generator.fallback(for: atClub, style: .standard), "Treino no Clube do Lago")
-        XCTAssertEqual(
-            generator.fallback(for: atClub, style: .creative),
-            "Treino pela manhã no Clube do Lago"
+    func testAutomaticTitleDisplayDistinguishesTemporaryFailureAndSuccess() {
+        let session = TennisSession(
+            kind: .practice,
+            title: "",
+            playedAt: .now,
+            titleOrigin: .automatic
         )
+        XCTAssertEqual(session.displayTitle, "Gerando título…")
+
+        session.automaticTitleState = .appleIntelligenceNotEnabled
+        XCTAssertEqual(session.displayTitle, "Título não gerado")
+
+        session.title = "Voleios sob as luzes"
+        session.automaticTitleState = .generated
+        XCTAssertEqual(session.displayTitle, "Voleios sob as luzes")
+        XCTAssertTrue(AutomaticTitleState.failed.canRetry)
+        XCTAssertFalse(AutomaticTitleState.deviceNotEligible.canRetry)
     }
 
     func testGeneratedTitleValidationEnforcesPromptContract() {
@@ -257,9 +261,13 @@ final class SessionFeatureTests: XCTestCase {
             context: container.mainContext
         )
 
+        XCTAssertTrue(session.title.isEmpty)
+        XCTAssertEqual(session.displayTitle, "Gerando título…")
+
         try await waitUntil { session.metadataVersion == 1 && session.title == "Manhã no Clube Azul" }
 
         XCTAssertEqual(session.titleOrigin, .automatic)
+        XCTAssertEqual(session.automaticTitleState, .generated)
         XCTAssertFalse(session.playedAtIsManual)
         XCTAssertEqual(session.playedAt, firstDate)
         XCTAssertEqual(session.recordedDuration, 300)
@@ -275,13 +283,15 @@ final class SessionFeatureTests: XCTestCase {
     }
 
     @MainActor
-    func testAutomaticTitleUsesFallbackWhenGenerationIsUnavailable() async throws {
+    func testAutomaticTitleSurfacesAppleIntelligenceUnavailableWithoutFallback() async throws {
         let defaults = UserDefaults.standard
         let previousStyle = defaults.object(forKey: "titleStyle")
         defaults.set(TitleStyle.standard.rawValue, forKey: "titleStyle")
         defer { restore(previousStyle, forKey: "titleStyle", in: defaults) }
 
-        let titleGenerator = RecordingTitleGenerator(generatedTitle: nil, fallbackTitle: "Título seguro")
+        let titleGenerator = RecordingTitleGenerator(
+            outcome: .unavailable(.appleIntelligenceNotEnabled)
+        )
         let session = TennisSession(
             kind: .practice,
             title: "Temporário",
@@ -298,10 +308,68 @@ final class SessionFeatureTests: XCTestCase {
         )
 
         model.resumeIfNeeded([session], context: container.mainContext)
-        try await waitUntil { session.metadataVersion == 1 && session.title == "Título seguro" }
+        try await waitUntil {
+            session.metadataVersion == 1
+                && session.automaticTitleState == .appleIntelligenceNotEnabled
+        }
 
         XCTAssertEqual(titleGenerator.generateCallCount, 1)
         XCTAssertEqual(session.titleOrigin, .automatic)
+        XCTAssertTrue(session.title.isEmpty)
+        XCTAssertEqual(session.displayTitle, "Título não gerado")
+    }
+
+    @MainActor
+    func testRetryAutomaticTitleGeneratesAfterPreviousUnavailableState() async throws {
+        let session = TennisSession(
+            kind: .practice,
+            title: "",
+            playedAt: .now,
+            titleOrigin: .automatic,
+            automaticTitleState: .appleIntelligenceNotEnabled,
+            status: .ready
+        )
+        session.metadataVersion = 1
+        let container = try makeContainer()
+        container.mainContext.insert(session)
+        let titleGenerator = RecordingTitleGenerator(generatedTitle: "Treino de retomada")
+        let model = AppModel(
+            analyzer: FeatureStubAnalyzer(),
+            titleGenerator: titleGenerator
+        )
+
+        model.retryAutomaticTitle(for: session, context: container.mainContext)
+        try await waitUntil { session.automaticTitleState == .generated }
+
+        XCTAssertEqual(session.title, "Treino de retomada")
+        XCTAssertEqual(session.displayTitle, "Treino de retomada")
+        XCTAssertEqual(titleGenerator.generateCallCount, 1)
+    }
+
+    @MainActor
+    func testExistingAutomaticFallbackIsClearedAndRegeneratedDuringMigration() async throws {
+        let session = TennisSession(
+            kind: .practice,
+            title: "Treino no clube antigo",
+            playedAt: .now,
+            titleOrigin: .automatic,
+            automaticTitleState: .legacy,
+            status: .ready
+        )
+        session.metadataVersion = 1
+        let container = try makeContainer()
+        container.mainContext.insert(session)
+        let titleGenerator = RecordingTitleGenerator(generatedTitle: "Noite de voleios")
+        let model = AppModel(
+            analyzer: FeatureStubAnalyzer(),
+            titleGenerator: titleGenerator
+        )
+
+        model.resumeIfNeeded([session], context: container.mainContext)
+        try await waitUntil { session.automaticTitleState == .generated }
+
+        XCTAssertEqual(session.title, "Noite de voleios")
+        XCTAssertEqual(titleGenerator.generateCallCount, 1)
     }
 
     @MainActor
@@ -346,6 +414,7 @@ final class SessionFeatureTests: XCTestCase {
         }
 
         XCTAssertEqual(session.clips.count, 1)
+        XCTAssertEqual(session.automaticTitleState, .generated)
         XCTAssertEqual(titleGenerator.generateCallCount, 1)
         XCTAssertEqual(titleGenerator.receivedStyles, [.creative])
         XCTAssertEqual(titleGenerator.receivedFacts.last?.rallyCount, 1)
@@ -489,8 +558,10 @@ final class SessionFeatureTests: XCTestCase {
         try await waitUntil { manual.metadataVersion == 1 && automatic.metadataVersion == 1 }
 
         XCTAssertEqual(manual.titleOrigin, .manual)
+        XCTAssertEqual(manual.automaticTitleState, .notApplicable)
         XCTAssertEqual(manual.title, "Título antigo")
         XCTAssertEqual(automatic.titleOrigin, .automatic)
+        XCTAssertEqual(automatic.automaticTitleState, .generated)
         XCTAssertEqual(automatic.title, "Título migrado")
         XCTAssertEqual(titleGenerator.generateCallCount, 1)
     }
@@ -583,8 +654,8 @@ final class SessionFeatureTests: XCTestCase {
             visualFrames: []
         )
 
-        if let result {
-            XCTAssertEqual(SessionTitleGenerator.validated(result), result)
+        if case .generated(let title) = result {
+            XCTAssertEqual(SessionTitleGenerator.validated(title), title)
         }
     }
 
@@ -649,8 +720,7 @@ nonisolated private struct FeatureStubAnalyzer: TennisAnalyzing {
 @MainActor
 private final class RecordingTitleGenerator: SessionTitleGenerating {
     let supportsVisualContext: Bool
-    private let generatedTitle: String?
-    private let fallbackTitle: String
+    private let outcome: SessionTitleGenerationOutcome
     private(set) var receivedFacts: [SessionTitleFacts] = []
     private(set) var receivedStyles: [TitleStyle] = []
     private(set) var receivedVisualFrameCounts: [Int] = []
@@ -658,28 +728,30 @@ private final class RecordingTitleGenerator: SessionTitleGenerating {
 
     init(
         generatedTitle: String?,
-        fallbackTitle: String = "Título inicial",
         supportsVisualContext: Bool = false
     ) {
-        self.generatedTitle = generatedTitle
-        self.fallbackTitle = fallbackTitle
+        outcome = generatedTitle.map(SessionTitleGenerationOutcome.generated) ?? .failed
         self.supportsVisualContext = supportsVisualContext
     }
 
-    func fallback(for facts: SessionTitleFacts, style: TitleStyle) -> String {
-        fallbackTitle
+    init(
+        outcome: SessionTitleGenerationOutcome,
+        supportsVisualContext: Bool = false
+    ) {
+        self.outcome = outcome
+        self.supportsVisualContext = supportsVisualContext
     }
 
     func generate(
         for facts: SessionTitleFacts,
         style: TitleStyle,
         visualFrames: [CGImage]
-    ) async -> String? {
+    ) async -> SessionTitleGenerationOutcome {
         generateCallCount += 1
         receivedFacts.append(facts)
         receivedStyles.append(style)
         receivedVisualFrameCounts.append(visualFrames.count)
-        return generatedTitle
+        return outcome
     }
 }
 

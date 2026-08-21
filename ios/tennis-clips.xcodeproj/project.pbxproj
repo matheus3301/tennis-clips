@@ -26,11 +26,13 @@
 		3EC55A48E7562D11102ED3C1 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB7928F1035F6B340059A58 /* RootView.swift */; };
 		432E04F391477D5CB0B497A3 /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C95C57E88A161D8FE8515B76 /* ActivityKit.framework */; };
 		4A2156673C3E573ABDA02A6E /* AppNotice.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DDC7D975C684BDD7FB28C54 /* AppNotice.swift */; };
+		4E55FB889F6C1929C6BAA7E1 /* AutomaticTitleStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56209F93B9858426DA2DFDE8 /* AutomaticTitleStatusView.swift */; };
 		4E6F9E84F98D7A48C9DC6B4A /* TennisProcessingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35CF26CA5CF61CAE2546287 /* TennisProcessingAttributes.swift */; };
 		4EE7EFEEFDA80EB29DB20A27 /* TitleStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED5B56786FA132E0E64D8EC1 /* TitleStyle.swift */; };
 		58A0943B91BD0C46AA1CED9B /* ImportedMovieMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F0AE10BF61181C826C997E7 /* ImportedMovieMetadata.swift */; };
 		5EFA6457DCBC0BA0A68ADD58 /* SessionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7574B0E4EBA1BBC452B7F3ED /* SessionStorage.swift */; };
 		6331A5687C5D25791DF1A5FA /* ImpactDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = FECC3DB3F986092E7C6DAAB7 /* ImpactDetector.swift */; };
+		652DC2AF6CB396A876C71A1A /* AutomaticTitleState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5D90A0C4DA434E2C06C1CB /* AutomaticTitleState.swift */; };
 		68806A201572074915F824A9 /* CompletedSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5F2CA444BEB350E7E2D581E /* CompletedSessionView.swift */; };
 		68C01C2A648A92DABF171B0D /* ProcessingActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A8FD05DB533ECD0F2D9CAD8 /* ProcessingActivityController.swift */; };
 		6CC52846E6E3F6DB70EC8762 /* ProcessingAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB6910FDFAC4D44CA3DF098 /* ProcessingAnimation.swift */; };
@@ -70,6 +72,7 @@
 		DD1D697D614485FF5B15F9C5 /* TennisProcessingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35CF26CA5CF61CAE2546287 /* TennisProcessingAttributes.swift */; };
 		DEB560C42A9367DF3F99CA4A /* AppCopy.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF78C87737502F2B7117ACEC /* AppCopy.swift */; };
 		E1167EE0A912A54620FEC946 /* AppSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7514D280F8344B66449CB214 /* AppSmokeTests.swift */; };
+		E29809FD857EC4E126691715 /* SessionTitleGenerationOutcome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935A53D333AD6BAD1A3F825A /* SessionTitleGenerationOutcome.swift */; };
 		E4382545969A824E43F4F3FD /* AppInformationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6CD60822AFE763F4D8310BF /* AppInformationView.swift */; };
 		E97AA6EFA4D3CBA2F5FC0E04 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 490D902FF15B38C9BB1EBC7E /* Lottie */; };
 		E9833524EC523BDAE4B4B04F /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC133A6C5C6795CAE333C3B7 /* SettingsView.swift */; };
@@ -137,7 +140,9 @@
 		4BE1745D8A1731748654B494 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		4DB6910FDFAC4D44CA3DF098 /* ProcessingAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingAnimation.swift; sourceTree = "<group>"; };
 		4DFF41145858DC9566334506 /* AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRoute.swift; sourceTree = "<group>"; };
+		4E5D90A0C4DA434E2C06C1CB /* AutomaticTitleState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticTitleState.swift; sourceTree = "<group>"; };
 		50F25D05E618437E264862D9 /* SessionFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFeatureTests.swift; sourceTree = "<group>"; };
+		56209F93B9858426DA2DFDE8 /* AutomaticTitleStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomaticTitleStatusView.swift; sourceTree = "<group>"; };
 		5A085446B2B1800587660970 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		5C75015FAE83A54576D0B6AB /* TennisProcessing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TennisProcessing.swift; sourceTree = "<group>"; };
 		5CD77316A5D986FF377B9919 /* RallyGalleryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyGalleryCard.swift; sourceTree = "<group>"; };
@@ -159,6 +164,7 @@
 		893CEAA27614B38A91CE4277 /* RallySourceTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallySourceTimeline.swift; sourceTree = "<group>"; };
 		8D5A41F0FFAEF28EE0DDCEF5 /* ProcessingMessageRotator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessingMessageRotator.swift; sourceTree = "<group>"; };
 		8EFDDDDF79ED5467ECD1406E /* RallyPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyPlayerView.swift; sourceTree = "<group>"; };
+		935A53D333AD6BAD1A3F825A /* SessionTitleGenerationOutcome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTitleGenerationOutcome.swift; sourceTree = "<group>"; };
 		94A235553E198BBB27FF7B07 /* RallyGallerySection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RallyGallerySection.swift; sourceTree = "<group>"; };
 		99571E614F8B3A175953A3FF /* TennisClipsActivity.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TennisClipsActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		A070E812ED0290D9C27FEC38 /* AppStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStyles.swift; sourceTree = "<group>"; };
@@ -231,12 +237,14 @@
 				3DDC7D975C684BDD7FB28C54 /* AppNotice.swift */,
 				060D9B1184012E1C418090B6 /* AppPreferences.swift */,
 				4DFF41145858DC9566334506 /* AppRoute.swift */,
+				4E5D90A0C4DA434E2C06C1CB /* AutomaticTitleState.swift */,
 				DD77F0EDA0BF855B211018DD /* ImportedMovie.swift */,
 				5F0AE10BF61181C826C997E7 /* ImportedMovieMetadata.swift */,
 				A0ADB1756BEEF3F7A3E8B313 /* ProductModels.swift */,
 				4901B73F9175213646DB47B6 /* ResolvedSessionLocation.swift */,
 				0EE86F6A785C6F518C128D10 /* SessionSearch.swift */,
 				FC5DE8555E9B4549FB066300 /* SessionTitleFacts.swift */,
+				935A53D333AD6BAD1A3F825A /* SessionTitleGenerationOutcome.swift */,
 				706ECE345A89030785F02357 /* SessionVisualFrameRequest.swift */,
 				2719AF67F907B0C4C8D50BA0 /* TennisClipsSchema.swift */,
 				83BBF1336047CE77022C40B2 /* TimeIntervalFormatting.swift */,
@@ -398,6 +406,7 @@
 		D193B84BC0BAFBA7D91B1914 /* components */ = {
 			isa = PBXGroup;
 			children = (
+				56209F93B9858426DA2DFDE8 /* AutomaticTitleStatusView.swift */,
 				4DB6910FDFAC4D44CA3DF098 /* ProcessingAnimation.swift */,
 				8D5A41F0FFAEF28EE0DDCEF5 /* ProcessingMessageRotator.swift */,
 				8EFDDDDF79ED5467ECD1406E /* RallyPlayerView.swift */,
@@ -546,6 +555,8 @@
 				80D74A696E93456C0CFB6B37 /* AppPreferences.swift in Sources */,
 				83701DFF751067E8E403A10F /* AppRoute.swift in Sources */,
 				C03E20001CC6F53DDCECE692 /* AppStyles.swift in Sources */,
+				652DC2AF6CB396A876C71A1A /* AutomaticTitleState.swift in Sources */,
+				4E55FB889F6C1929C6BAA7E1 /* AutomaticTitleStatusView.swift in Sources */,
 				68806A201572074915F824A9 /* CompletedSessionView.swift in Sources */,
 				228B0739C3A7AB9ADF0ED079 /* ContinuedProcessingService.swift in Sources */,
 				B44889940012C3EB99D81A11 /* EditSessionView.swift in Sources */,
@@ -586,6 +597,7 @@
 				5EFA6457DCBC0BA0A68ADD58 /* SessionStorage.swift in Sources */,
 				A07D71A580548310317DE58A /* SessionTitleFacts.swift in Sources */,
 				ADAF3A80124BAACC02606982 /* SessionTitleGenerating.swift in Sources */,
+				E29809FD857EC4E126691715 /* SessionTitleGenerationOutcome.swift in Sources */,
 				A05D5FCA7F6C717C6B8D54F1 /* SessionTitleGenerator.swift in Sources */,
 				75FD074D9AF0A616B6891036 /* SessionVisualContextProvider.swift in Sources */,
 				F3C4AA4A4CB17FF52B7833BF /* SessionVisualFrameRequest.swift in Sources */,

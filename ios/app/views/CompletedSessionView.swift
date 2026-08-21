@@ -13,6 +13,7 @@ struct CompletedSessionView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("VÍDEO PRONTO").font(.caption.weight(.black)).tracking(1.7).foregroundStyle(AppPalette.clayMark)
                     Text("As jogadas que você escolheu.").displayType(size: 32).foregroundStyle(AppPalette.ink)
+                    SessionMetadataSummary(session: session)
                     FinalVideoPlayer(url: outputURL)
                         .frame(height: 360)
                         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -84,6 +85,7 @@ struct FailureSessionView: View {
             Image(systemName: "waveform.badge.exclamationmark").font(.system(size: 54, weight: .bold)).foregroundStyle(AppPalette.clayMark)
             Text("Não conseguimos separar as jogadas.").displayType(size: 33).multilineTextAlignment(.center).foregroundStyle(AppPalette.ink)
             Text(session.errorMessage ?? "Confira as gravações e tente novamente.").multilineTextAlignment(.center).foregroundStyle(AppPalette.ink.opacity(0.6))
+            SessionMetadataSummary(session: session)
             Button(action: retry) {
                 Label("Tentar novamente", systemImage: "arrow.clockwise")
             }
