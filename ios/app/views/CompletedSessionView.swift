@@ -1,10 +1,10 @@
-import AVKit
 import SwiftData
 import SwiftUI
 
 struct CompletedSessionView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.modelContext) private var modelContext
+    @State private var isPresentingFullScreen = false
     let session: TennisSession
 
     var body: some View {
@@ -24,6 +24,24 @@ struct CompletedSessionView: View {
                     FinalVideoPlayer(url: outputURL)
                         .frame(height: playerHeight(for: proxy.size.height))
                         .clipShape(.rect(cornerRadius: 22))
+                        .overlay(alignment: .topTrailing) {
+                            Button(
+                                "Ver em tela cheia",
+                                systemImage: "arrow.up.left.and.arrow.down.right",
+                                action: presentFullScreen
+                            )
+                            .buttonStyle(.plain)
+                            .labelStyle(.iconOnly)
+                            .font(.title3.bold())
+                            .foregroundStyle(.black)
+                            .frame(width: 44, height: 44)
+                            .background(.white.opacity(0.9), in: .circle)
+                            .overlay {
+                                Circle()
+                                    .stroke(.black.opacity(0.12), lineWidth: 1)
+                            }
+                            .padding(10)
+                        }
                     HStack(spacing: 9) {
                         SummaryMetric(value: String(session.keptClips.count), label: "jogadas")
                         SummaryMetric(value: session.compiledDuration.shortDuration, label: "duração")
@@ -55,6 +73,9 @@ struct CompletedSessionView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
+                .fullScreenCover(isPresented: $isPresentingFullScreen) {
+                    FullScreenVideoPlayer(url: outputURL)
+                }
             }
         }
     }
@@ -64,40 +85,9 @@ struct CompletedSessionView: View {
             && session.automaticTitleState != .generated ? 72 : 0
         return min(max(availableHeight * 0.35 - titleStatusAllowance, 128), 260)
     }
-}
 
-private struct FinalVideoPlayer: View {
-    let url: URL
-    @State private var player: AVPlayer
-    @State private var isPlaying = false
-
-    init(url: URL) {
-        self.url = url
-        _player = State(initialValue: AVPlayer(url: url))
-    }
-
-    var body: some View {
-        ZStack {
-            if isPlaying { AspectFillPlayerView(player: player).transition(.opacity) } else { VideoThumbnailView(url: url) }
-            Button {
-                isPlaying.toggle()
-                isPlaying ? player.play() : player.pause()
-            } label: {
-                ZStack {
-                    Color.clear
-                    if !isPlaying {
-                        Circle().fill(.ultraThinMaterial).frame(width: 72, height: 72)
-                        Image(systemName: "play.fill").font(.title2.weight(.bold)).foregroundStyle(AppPalette.chalk)
-                    }
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isPlaying ? "Pausar vídeo" : "Reproduzir vídeo")
-        }
-        .background(AppPalette.hardCourt)
-        .animation(.easeOut(duration: 0.2), value: isPlaying)
-        .onDisappear { player.pause(); isPlaying = false }
+    private func presentFullScreen() {
+        isPresentingFullScreen = true
     }
 }
 
